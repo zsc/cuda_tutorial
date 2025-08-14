@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第18章：大规模点云重建与网格化</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="18">第18章：大规模点云重建与网格化</h1>
+<p>本章深入探讨大规模点云数据的GPU加速重建技术。我们将学习如何利用CUDA并行化经典的三维重建算法，包括Poisson重建、Marching Cubes等，并实现高效的网格后处理流程。这些技术在自动驾驶的高精地图构建、具身智能的环境建模等场景中发挥着关键作用。</p>
+<h2 id="181-poissongpu">18.1 Poisson重建的GPU加速</h2>
+<h3 id="1811-poisson">18.1.1 Poisson重建原理回顾</h3>
+<p>Poisson表面重建是一种将带法向量的点云转换为水密网格的全局优化方法。其核心思想是将表面重建问题转化为求解Poisson方程：</p>
+<div class="codehilite"><pre><span></span><code>∇²χ = ∇·V
+</code></pre></div>
+
+<p>其中χ是指示函数（indicator function），V是由点云法向量构建的向量场。该方法的优势在于对噪声鲁棒，能生成光滑的水密表面。</p>
+<h3 id="1812">18.1.2 八叉树并行构建</h3>
+<p>Poisson重建的第一步是构建自适应八叉树。在GPU上并行构建八叉树的关键挑战包括：</p>
+<ol>
+<li><strong>Morton编码</strong>：使用Z-order曲线将3D坐标映射到1D空间</li>
+<li><strong>并行节点分裂</strong>：基于点密度的自适应细分</li>
+<li><strong>层级遍历</strong>：自底向上和自顶向下的并行遍历策略</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>Morton编码示意图：
+    Y
+    ↑
+  3 │ 10  11  14  15
+  2 │ 08  09  12  13
+  1 │ 02  03  06  07
+  0 │ 00  01  04  05
+    └────────────────→ X
+      0   1   2   3
+
+3D扩展：交错x,y,z的二进制位
+</code></pre></div>
+
+<h3 id="1813">18.1.3 稀疏线性系统求解</h3>
+<p>Poisson方程离散化后形成大规模稀疏线性系统Ax=b。GPU上的高效求解策略：</p>
+<p><strong>共轭梯度法（CG）并行化</strong>：</p>
+<div class="codehilite"><pre><span></span><code>算法流程：
+
+<span class="mi">1</span>.<span class="w"> </span><span class="nv">r</span>₀<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">Ax</span>₀
+<span class="mi">2</span>.<span class="w"> </span><span class="nv">p</span>₀<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">r</span>₀
+<span class="mi">3</span>.<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>,<span class="w"> </span><span class="mi">1</span>,<span class="w"> </span><span class="mi">2</span>,<span class="w"> </span>...
+<span class="w">   </span>αₖ<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ss">(</span><span class="nv">r</span>ₖᵀ<span class="nv">r</span>ₖ<span class="ss">)</span><span class="o">/</span><span class="ss">(</span><span class="nv">p</span>ₖᵀ<span class="nv">Ap</span>ₖ<span class="ss">)</span>
+<span class="w">   </span><span class="nv">x</span>ₖ₊₁<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">x</span>ₖ<span class="w"> </span><span class="o">+</span><span class="w"> </span>αₖ<span class="nv">p</span>ₖ
+<span class="w">   </span><span class="nv">r</span>ₖ₊₁<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">r</span>ₖ<span class="w"> </span><span class="o">-</span><span class="w"> </span>αₖ<span class="nv">Ap</span>ₖ
+<span class="w">   </span>βₖ<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ss">(</span><span class="nv">r</span>ₖ₊₁ᵀ<span class="nv">r</span>ₖ₊₁<span class="ss">)</span><span class="o">/</span><span class="ss">(</span><span class="nv">r</span>ₖᵀ<span class="nv">r</span>ₖ<span class="ss">)</span>
+<span class="w">   </span><span class="nv">p</span>ₖ₊₁<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">r</span>ₖ₊₁<span class="w"> </span><span class="o">+</span><span class="w"> </span>βₖ<span class="nv">p</span>ₖ
+</code></pre></div>
+
+<p>关键并行操作：</p>
+<ul>
+<li><strong>稀疏矩阵-向量乘法（SpMV）</strong>：使用CSR格式，每个线程处理一行</li>
+<li><strong>向量点积</strong>：使用分段归约，结合warp shuffle优化</li>
+<li><strong>向量更新</strong>：完全并行，带宽受限操作</li>
+</ul>
+<p><strong>多重网格方法（Multigrid）</strong>：</p>
+<div class="codehilite"><pre><span></span><code>V-Cycle示意：
+细网格  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         ↘                                     ↗
+          ↘ 限制(Restriction)     延拓(Prolongation) ↗
+           ↘                                   ↗
+中网格      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              ↘                         ↗
+               ↘                       ↗
+粗网格         ━━━━━━━━━━━━━━━━━━━━━
+                    直接求解
+</code></pre></div>
+
+<h3 id="1814-gpu">18.1.4 GPU优化策略</h3>
+<p><strong>内存访问优化</strong>：</p>
+<ol>
+<li><strong>纹理内存缓存八叉树节点</strong>：利用空间局部性</li>
+<li><strong>共享内存缓存邻居信息</strong>：减少全局内存访问</li>
+<li><strong>向量化加载</strong>：使用float4提高带宽利用率</li>
+</ol>
+<p><strong>计算优化</strong>：</p>
+<ol>
+<li><strong>Warp级原语加速归约</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用warp shuffle进行快速归约</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">warpReduce</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span>
+<span class="w">        </span><span class="n">val</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">__shfl_down_sync</span><span class="p">(</span><span class="mh">0xffffffff</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">val</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li>
+<p><strong>混合精度计算</strong>：
+- 使用FP32进行主要计算
+- FP16存储中间结果
+- 关键累加使用FP64避免精度损失</p>
+</li>
+<li>
+<p><strong>动态并行优化八叉树遍历</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">traverseOctree</span><span class="p">(</span><span class="n">Node</span><span class="o">*</span><span class="w"> </span><span class="n">nodes</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">level</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 动态启动子网格处理子节点</span>
+<span class="w">        </span><span class="kt">dim3</span><span class="w"> </span><span class="nf">childGrid</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+<span class="w">        </span><span class="n">traverseOctree</span><span class="o">&lt;&lt;&lt;</span><span class="n">childGrid</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span>
+<span class="w">            </span><span class="n">nodes</span><span class="p">[</span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">].</span><span class="n">children</span><span class="p">,</span><span class="w"> </span><span class="n">level</span><span class="mi">-1</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1815">18.1.5 性能分析与瓶颈</h3>
+<p><strong>典型性能瓶颈</strong>：</p>
+<ol>
+<li><strong>不规则内存访问</strong>：八叉树遍历的随机访问模式</li>
+<li><strong>负载不均衡</strong>：自适应细分导致的工作量差异</li>
+<li><strong>同步开销</strong>：多重网格的层级间同步</li>
+</ol>
+<p><strong>性能指标</strong>（RTX 4090）：</p>
+<ul>
+<li>100万点重建：~200ms（CPU：~8s）</li>
+<li>1000万点重建：~2.5s（CPU：~120s）</li>
+<li>内存带宽利用率：~65%</li>
+<li>SM占用率：~80%</li>
+</ul>
+<h2 id="182-marching-cubes">18.2 Marching Cubes并行化</h2>
+<h3 id="1821">18.2.1 算法原理与查找表</h3>
+<p>Marching Cubes是将体数据（如距离场）转换为三角网格的经典算法。核心思想是遍历每个体素（8个顶点的立方体），根据顶点的内外状态生成三角形。</p>
+<p><strong>查找表结构</strong>：</p>
+<div class="codehilite"><pre><span></span><code>立方体顶点编号：
+    4 ────── 5
+   /│       /│
+  / │      / │
+ 7 ────── 6  │
+ │  0 ────│─ 1
+ │ /      │ /
+ │/       │/
+ 3 ────── 2
+
+256种配置 = 2^8（每个顶点内/外）
+</code></pre></div>
+
+<p><strong>边索引表</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__constant__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">edgeTable</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span><span class="w">  </span><span class="c1">// 每个配置激活的边</span>
+<span class="kt">__constant__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">triTable</span><span class="p">[</span><span class="mi">256</span><span class="p">][</span><span class="mi">16</span><span class="p">];</span><span class="w"> </span><span class="c1">// 每个配置的三角形顶点</span>
+</code></pre></div>
+
+<p>关键优化：将查找表放入常量内存，所有线程访问同一地址时可达到全带宽。</p>
+<h3 id="1822">18.2.2 并行体素遍历</h3>
+<p><strong>两遍扫描策略</strong>：</p>
+<ol>
+<li><strong>第一遍：计数</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">countVertices</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">volume</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">vertexCount</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 获取8个顶点的值</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">v</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
+<span class="w">    </span><span class="n">loadCubeVertices</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span><span class="w"> </span><span class="n">volume</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 计算配置索引</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">cubeIndex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">isoValue</span><span class="p">)</span><span class="w"> </span><span class="n">cubeIndex</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 查表获取顶点数</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">nVerts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">numVertsTable</span><span class="p">[</span><span class="n">cubeIndex</span><span class="p">];</span>
+<span class="w">    </span><span class="n">vertexCount</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nVerts</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>前缀和分配内存</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用thrust或CUB进行并行前缀和</span>
+<span class="n">thrust</span><span class="o">::</span><span class="n">exclusive_scan</span><span class="p">(</span><span class="n">vertexCount</span><span class="p">,</span><span class="w"> </span><span class="n">vertexCount</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">numVoxels</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                       </span><span class="n">vertexOffset</span><span class="p">);</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>第二遍：生成顶点</strong></li>
+</ol>
+<h3 id="1823">18.2.3 顶点生成与索引</h3>
+<p><strong>线性插值计算顶点位置</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">vertexInterp</span><span class="p">(</span><span class="kt">float3</span><span class="w"> </span><span class="n">p1</span><span class="p">,</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">p2</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                               </span><span class="kt">float</span><span class="w"> </span><span class="n">v1</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">v2</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">iso</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">iso</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">v1</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">v2</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">v1</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">p1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">p2</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">p1</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>共享内存优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">generateTriangles</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">vertexCache</span><span class="p">[</span><span class="mi">12</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">indexCache</span><span class="p">[</span><span class="mi">15</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">gid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tid</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 协作加载体素数据到共享内存</span>
+<span class="w">    </span><span class="n">loadToShared</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span><span class="w"> </span><span class="n">vertexCache</span><span class="p">);</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// 生成三角形</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">cubeIndex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeCubeIndex</span><span class="p">(</span><span class="n">vertexCache</span><span class="p">,</span><span class="w"> </span><span class="n">tid</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">cubeIndex</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">cubeIndex</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">generateTrianglesForVoxel</span><span class="p">(</span><span class="n">cubeIndex</span><span class="p">,</span><span class="w"> </span><span class="n">vertexCache</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                 </span><span class="n">indexCache</span><span class="p">,</span><span class="w"> </span><span class="n">tid</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1824">18.2.4 流压缩与输出管理</h3>
+<p><strong>无锁原子分配</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">allocateVertices</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">globalCounter</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">atomicAdd</span><span class="p">(</span><span class="n">globalCounter</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>流压缩优化</strong>：
+使用CUB的DeviceSelect进行高效流压缩：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 移除退化三角形</span>
+<span class="n">cub</span><span class="o">::</span><span class="n">DeviceSelect</span><span class="o">::</span><span class="n">Flagged</span><span class="p">(</span><span class="n">d_temp_storage</span><span class="p">,</span><span class="w"> </span><span class="n">temp_storage_bytes</span><span class="p">,</span>
+<span class="w">                           </span><span class="n">d_triangles</span><span class="p">,</span><span class="w"> </span><span class="n">d_flags</span><span class="p">,</span><span class="w"> </span><span class="n">d_output</span><span class="p">,</span>
+<span class="w">                           </span><span class="n">d_num_selected</span><span class="p">,</span><span class="w"> </span><span class="n">num_triangles</span><span class="p">);</span>
+</code></pre></div>
+
+<p><strong>内存池管理</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">TrianglePool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float3</span><span class="o">*</span><span class="w"> </span><span class="n">vertices</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">indices</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">counters</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">resize</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">estimatedTriangles</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 预分配1.5倍估计大小避免重分配</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">capacity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">estimatedTriangles</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1.5</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vertices</span><span class="p">,</span><span class="w"> </span><span class="n">capacity</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float3</span><span class="p">));</span>
+<span class="w">        </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">indices</span><span class="p">,</span><span class="w"> </span><span class="n">capacity</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h3 id="1825-dual-marching-cubes">18.2.5 扩展：Dual Marching Cubes</h3>
+<p>Dual Marching Cubes通过在对偶网格上操作，生成更高质量的网格：</p>
+<p><strong>优势</strong>：</p>
+<ul>
+<li>避免了原始MC的二义性问题</li>
+<li>生成的网格拓扑更加规则</li>
+<li>更适合后续的网格优化</li>
+</ul>
+<p><strong>实现要点</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">dualMarchingCubes</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 在体素中心而非边上生成顶点</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">center</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeVoxelCenter</span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 使用Hermite数据（位置+梯度）</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeGradient</span><span class="p">(</span><span class="n">center</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// QEF（二次误差函数）求解最优顶点位置</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">vertex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">solveQEF</span><span class="p">(</span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">gradient</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="183">18.3 网格简化与优化</h2>
+<h3 id="1831">18.3.1 边折叠算法并行化</h3>
+<p>边折叠（Edge Collapse）是网格简化的核心操作。GPU并行化的挑战在于处理依赖关系和保持网格一致性。</p>
+<p><strong>基本边折叠操作</strong>：</p>
+<div class="codehilite"><pre><span></span><code>折叠前：        折叠后：
+    v1              v_new
+   /│\              /|\
+  / │ \            / | \
+ /  │  \          /  |  \
+v3──v2──v4  →   v3───────v4
+
+边(v1,v2)折叠为新顶点v_new
+</code></pre></div>
+
+<p><strong>并行策略：独立集方法</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">findIndependentEdges</span><span class="p">(</span><span class="n">Edge</span><span class="o">*</span><span class="w"> </span><span class="n">edges</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="o">*</span><span class="w"> </span><span class="n">canCollapse</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">eid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Edge</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edges</span><span class="p">[</span><span class="n">eid</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 检查边的两个顶点是否被其他边标记</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">independent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">numNeighbors</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">atomicCAS</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vertexLocked</span><span class="p">[</span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">independent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">canCollapse</span><span class="p">[</span><span class="n">eid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">independent</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1832">18.3.2 误差度量计算</h3>
+<p><strong>二次误差度量（QEM）</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">Quadric</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float4</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span><span class="w">  </span><span class="c1">// 对称4x4矩阵的10个独立元素</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">computeError</span><span class="p">(</span><span class="kt">float3</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// v^T Q v 计算</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>
+<span class="w">            </span><span class="n">v</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>
+<span class="w">            </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="o">+</span>
+<span class="w">            </span><span class="n">v</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>
+<span class="w">            </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>
+<span class="w">            </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">9</span><span class="p">];</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">error</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">add</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Quadric</span><span class="o">&amp;</span><span class="w"> </span><span class="n">other</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="cp">#pragma unroll</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="n">q</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">q</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>最优顶点位置求解</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">computeOptimalPosition</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Quadric</span><span class="o">&amp;</span><span class="w"> </span><span class="n">q</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 求解线性系统 ∇error = 0</span>
+<span class="w">    </span><span class="n">float3x3</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">extractMatrix</span><span class="p">(</span><span class="n">q</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">extractVector</span><span class="p">(</span><span class="n">q</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 使用Cramer法则（3x3矩阵）</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">det</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">determinant</span><span class="p">(</span><span class="n">A</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">abs</span><span class="p">(</span><span class="n">det</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">1e-6</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">solveLinearSystem</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">det</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 退化情况：使用中点</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">v1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">v2</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5f</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1833">18.3.3 优先队列管理</h3>
+<p><strong>GPU友好的优先队列</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">GPUPriorityQueue</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">HeapNode</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">cost</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">edgeId</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="n">HeapNode</span><span class="o">*</span><span class="w"> </span><span class="n">heap</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">insertBatch</span><span class="p">(</span><span class="n">HeapNode</span><span class="o">*</span><span class="w"> </span><span class="n">items</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 批量插入+并行堆化</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">oldSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">atomicAdd</span><span class="p">(</span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 拷贝到堆尾</span>
+<span class="w">        </span><span class="n">memcpy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">heap</span><span class="p">[</span><span class="n">oldSize</span><span class="p">],</span><span class="w"> </span><span class="n">items</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">HeapNode</span><span class="p">));</span>
+
+<span class="w">        </span><span class="c1">// 并行上浮</span>
+<span class="w">        </span><span class="n">parallelHeapify</span><span class="p">(</span><span class="n">oldSize</span><span class="p">,</span><span class="w"> </span><span class="n">oldSize</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">count</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">parallelHeapify</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">end</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 使用分段并行堆化算法</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__log2f</span><span class="p">(</span><span class="n">end</span><span class="p">);</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">level</span><span class="o">--</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">stride</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">level</span><span class="p">;</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">stride</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="w">                </span><span class="n">heapifyDown</span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h3 id="1834">18.3.4 拓扑保持策略</h3>
+<p><strong>流形保持检查</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">preservesManifold</span><span class="p">(</span><span class="n">Edge</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 1. 链接条件检查</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">sharedNeighbors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">valence</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v2</span><span class="p">.</span><span class="n">valence</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v2</span><span class="p">.</span><span class="n">neighbors</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+<span class="w">                </span><span class="n">sharedNeighbors</span><span class="o">++</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 边界边应有1个共享邻居，内部边应有2个</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">isBoundary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">boundary</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v2</span><span class="p">.</span><span class="n">boundary</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">sharedNeighbors</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="p">(</span><span class="n">isBoundary</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">preventsFoldover</span><span class="p">(</span><span class="n">Edge</span><span class="w"> </span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">newPos</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 检查折叠后是否产生翻转的三角形</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">numFaces</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Face</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">faces</span><span class="p">[</span><span class="n">e</span><span class="p">.</span><span class="n">v1</span><span class="p">.</span><span class="n">faces</span><span class="p">[</span><span class="n">i</span><span class="p">]];</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">normal_before</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeNormal</span><span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 模拟折叠后的法向</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">normal_after</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeNormalAfterCollapse</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">newPos</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">normal_before</span><span class="p">,</span><span class="w"> </span><span class="n">normal_after</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">0.1f</span><span class="p">)</span><span class="w">  </span><span class="c1">// 阈值</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1835-gpu">18.3.5 GPU友好的数据结构</h3>
+<p><strong>半边数据结构的GPU实现</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HalfEdge</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">vertex</span><span class="p">;</span><span class="w">      </span><span class="c1">// 指向的顶点</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">opposite</span><span class="p">;</span><span class="w">    </span><span class="c1">// 对边</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">next</span><span class="p">;</span><span class="w">        </span><span class="c1">// 下一条半边</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">face</span><span class="p">;</span><span class="w">        </span><span class="c1">// 所属面</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">CompactMesh</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// SOA布局提高内存合并</span>
+<span class="w">    </span><span class="kt">float3</span><span class="o">*</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float3</span><span class="o">*</span><span class="w"> </span><span class="n">normals</span><span class="p">;</span>
+<span class="w">    </span><span class="n">HalfEdge</span><span class="o">*</span><span class="w"> </span><span class="n">halfedges</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">vertexEdges</span><span class="p">;</span><span class="w">    </span><span class="c1">// 每个顶点的一条出边</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">collapseEdge</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">edgeId</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">HalfEdge</span><span class="w"> </span><span class="n">he</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">halfedges</span><span class="p">[</span><span class="n">edgeId</span><span class="p">];</span>
+<span class="w">        </span><span class="n">HalfEdge</span><span class="w"> </span><span class="n">opp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">halfedges</span><span class="p">[</span><span class="n">he</span><span class="p">.</span><span class="n">opposite</span><span class="p">];</span>
+
+<span class="w">        </span><span class="c1">// 更新拓扑连接</span>
+<span class="w">        </span><span class="n">atomicExch</span><span class="p">(</span><span class="o">&amp;</span><span class="n">halfedges</span><span class="p">[</span><span class="n">he</span><span class="p">.</span><span class="n">next</span><span class="p">].</span><span class="n">opposite</span><span class="p">,</span><span class="w"> </span><span class="n">opp</span><span class="p">.</span><span class="n">next</span><span class="p">);</span>
+<span class="w">        </span><span class="n">atomicExch</span><span class="p">(</span><span class="o">&amp;</span><span class="n">halfedges</span><span class="p">[</span><span class="n">opp</span><span class="p">.</span><span class="n">next</span><span class="p">].</span><span class="n">opposite</span><span class="p">,</span><span class="w"> </span><span class="n">he</span><span class="p">.</span><span class="n">next</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 标记删除的元素</span>
+<span class="w">        </span><span class="n">atomicExch</span><span class="p">(</span><span class="o">&amp;</span><span class="n">halfedges</span><span class="p">[</span><span class="n">edgeId</span><span class="p">].</span><span class="n">vertex</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>内存池与压缩</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">compactMesh</span><span class="p">(</span><span class="n">CompactMesh</span><span class="w"> </span><span class="n">mesh</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">validFlags</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 使用流压缩移除已删除的元素</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">mesh</span><span class="p">.</span><span class="n">numVertices</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">mesh</span><span class="p">.</span><span class="n">positions</span><span class="p">[</span><span class="n">tid</span><span class="p">].</span><span class="n">x</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">DELETED_MARKER</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">validFlags</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">validFlags</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 使用CUB进行流压缩</span>
+<span class="n">cub</span><span class="o">::</span><span class="n">DeviceSelect</span><span class="o">::</span><span class="n">Flagged</span><span class="p">(...)</span>
+</code></pre></div>
+
+<h2 id="184">18.4 纹理映射与混合</h2>
+<h3 id="1841-uv">18.4.1 UV参数化</h3>
+<p>UV参数化将3D网格表面映射到2D纹理空间。GPU加速的关键在于并行化优化过程。</p>
+<p><strong>最小化畸变的参数化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">computeParameterization</span><span class="p">(</span><span class="n">Vertex</span><span class="o">*</span><span class="w"> </span><span class="n">vertices</span><span class="p">,</span><span class="w"> </span><span class="n">Face</span><span class="o">*</span><span class="w"> </span><span class="n">faces</span><span class="p">,</span>
+<span class="w">                                       </span><span class="kt">float2</span><span class="o">*</span><span class="w"> </span><span class="n">uvCoords</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">vid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// LSCM（Least Squares Conformal Maps）方法</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">float2</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 计算共形能量梯度</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">vertices</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">numFaces</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Face</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">faces</span><span class="p">[</span><span class="n">vertices</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">faces</span><span class="p">[</span><span class="n">i</span><span class="p">]];</span>
+<span class="w">        </span><span class="kt">float2</span><span class="w"> </span><span class="n">localGrad</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeConformalGradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">vid</span><span class="p">);</span>
+<span class="w">        </span><span class="n">gradient</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">localGrad</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 梯度下降更新</span>
+<span class="w">    </span><span class="n">uvCoords</span><span class="p">[</span><span class="n">vid</span><span class="p">]</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mf">0.01f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">gradient</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float2</span><span class="w"> </span><span class="n">computeConformalGradient</span><span class="p">(</span><span class="n">Face</span><span class="w"> </span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">vid</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 计算角度畸变</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">p0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vertices</span><span class="p">[</span><span class="n">f</span><span class="p">.</span><span class="n">v0</span><span class="p">].</span><span class="n">pos</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">p1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vertices</span><span class="p">[</span><span class="n">f</span><span class="p">.</span><span class="n">v1</span><span class="p">].</span><span class="n">pos</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">p2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vertices</span><span class="p">[</span><span class="n">f</span><span class="p">.</span><span class="n">v2</span><span class="p">].</span><span class="n">pos</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">uv0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uvCoords</span><span class="p">[</span><span class="n">f</span><span class="p">.</span><span class="n">v0</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">uv1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uvCoords</span><span class="p">[</span><span class="n">f</span><span class="p">.</span><span class="n">v1</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">uv2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uvCoords</span><span class="p">[</span><span class="n">f</span><span class="p">.</span><span class="n">v2</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 共形映射的Jacobian矩阵</span>
+<span class="w">    </span><span class="n">float2x2</span><span class="w"> </span><span class="n">J</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeJacobian</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="w"> </span><span class="n">p1</span><span class="p">,</span><span class="w"> </span><span class="n">p2</span><span class="p">,</span><span class="w"> </span><span class="n">uv0</span><span class="p">,</span><span class="w"> </span><span class="n">uv1</span><span class="p">,</span><span class="w"> </span><span class="n">uv2</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 最小化 ||J - cR||²，其中R是旋转矩阵</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">computeGradient</span><span class="p">(</span><span class="n">J</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1842">18.4.2 多视图纹理融合</h3>
+<p>从多个视角的图像中提取并融合纹理信息：</p>
+<p><strong>视图选择与权重计算</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">selectBestViews</span><span class="p">(</span><span class="n">Face</span><span class="o">*</span><span class="w"> </span><span class="n">faces</span><span class="p">,</span><span class="w"> </span><span class="n">Camera</span><span class="o">*</span><span class="w"> </span><span class="n">cameras</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">bestViews</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">weights</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">fid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Face</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">faces</span><span class="p">[</span><span class="n">fid</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">faceNormal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeFaceNormal</span><span class="p">(</span><span class="n">f</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">faceCenter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeFaceCenter</span><span class="p">(</span><span class="n">f</span><span class="p">);</span>
+
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">maxScore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-1.0f</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">bestView</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 评估每个相机视角</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">numCameras</span><span class="p">;</span><span class="w"> </span><span class="n">c</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">viewDir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">cameras</span><span class="p">[</span><span class="n">c</span><span class="p">].</span><span class="n">position</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">faceCenter</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 视角质量评分</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">angleCos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dot</span><span class="p">(</span><span class="n">viewDir</span><span class="p">,</span><span class="w"> </span><span class="n">faceNormal</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">length</span><span class="p">(</span><span class="n">cameras</span><span class="p">[</span><span class="n">c</span><span class="p">].</span><span class="n">position</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">faceCenter</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">resolution</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cameras</span><span class="p">[</span><span class="n">c</span><span class="p">].</span><span class="n">focalLength</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">distance</span><span class="p">;</span>
+
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">angleCos</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">resolution</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">score</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">maxScore</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">maxScore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">score</span><span class="p">;</span>
+<span class="w">            </span><span class="n">bestView</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">bestViews</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bestView</span><span class="p">;</span>
+<span class="w">    </span><span class="n">weights</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">maxScore</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>纹理采样与混合</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">blendTextures</span><span class="p">(</span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">outputTexture</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                              </span><span class="n">cudaTextureObject_t</span><span class="o">*</span><span class="w"> </span><span class="n">inputTextures</span><span class="p">,</span>
+<span class="w">                              </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">blendWeights</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float4</span><span class="w"> </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">float4</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">totalWeight</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 多视图加权混合</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">numViews</span><span class="p">;</span><span class="w"> </span><span class="n">v</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">float2</span><span class="w"> </span><span class="n">uv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">projectToView</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">isValidProjection</span><span class="p">(</span><span class="n">uv</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">float4</span><span class="w"> </span><span class="n">sample</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tex2D</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputTextures</span><span class="p">[</span><span class="n">v</span><span class="p">],</span><span class="w"> </span><span class="n">uv</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">uv</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="w">            </span><span class="kt">float</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blendWeights</span><span class="p">[</span><span class="n">v</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">computeSeamWeight</span><span class="p">(</span><span class="n">uv</span><span class="p">);</span>
+
+<span class="w">            </span><span class="n">color</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">sample</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">w</span><span class="p">;</span>
+<span class="w">            </span><span class="n">totalWeight</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">w</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">outputTexture</span><span class="p">[</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">color</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">totalWeight</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1843">18.4.3 接缝消除技术</h3>
+<p><strong>Poisson图像编辑</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">poissonBlending</span><span class="p">(</span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">texture</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">seamMask</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">seamMask</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 在接缝处求解Poisson方程</span>
+<span class="w">        </span><span class="kt">float4</span><span class="w"> </span><span class="n">laplacian</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeLaplacian</span><span class="p">(</span><span class="n">texture</span><span class="p">,</span><span class="w"> </span><span class="n">idx</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float4</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeSeamGradient</span><span class="p">(</span><span class="n">texture</span><span class="p">,</span><span class="w"> </span><span class="n">idx</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Jacobi迭代</span>
+<span class="w">        </span><span class="n">texture</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.25f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">texture</span><span class="p">[</span><span class="n">idx</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">texture</span><span class="p">[</span><span class="n">idx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">+</span>
+<span class="w">            </span><span class="n">texture</span><span class="p">[</span><span class="n">idx</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">width</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">texture</span><span class="p">[</span><span class="n">idx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">width</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">gradient</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>图割优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">graphCutSeam</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">labels</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">dataCost</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                             </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">smoothCost</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// α-expansion算法的并行实现</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">pixel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">currentLabel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">labels</span><span class="p">[</span><span class="n">pixel</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 计算切换标签的代价</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">costKeep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dataCost</span><span class="p">[</span><span class="n">pixel</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">numLabels</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">currentLabel</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">costSwitch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FLT_MAX</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">numLabels</span><span class="p">;</span><span class="w"> </span><span class="n">l</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">l</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">currentLabel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">float</span><span class="w"> </span><span class="n">cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dataCost</span><span class="p">[</span><span class="n">pixel</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">numLabels</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">l</span><span class="p">];</span>
+
+<span class="w">            </span><span class="c1">// 添加平滑项</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kt">int</span><span class="w"> </span><span class="n">neighbor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getNeighbor</span><span class="p">(</span><span class="n">pixel</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+<span class="w">                </span><span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">cost</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">smoothCost</span><span class="p">[</span><span class="n">abs</span><span class="p">(</span><span class="n">l</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">labels</span><span class="p">[</span><span class="n">neighbor</span><span class="p">])];</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="n">costSwitch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min</span><span class="p">(</span><span class="n">costSwitch</span><span class="p">,</span><span class="w"> </span><span class="n">cost</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 更新标签</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">costSwitch</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">costKeep</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">labels</span><span class="p">[</span><span class="n">pixel</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">argmin</span><span class="p">(</span><span class="n">costSwitch</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1844">18.4.4 纹理图集生成</h3>
+<p><strong>矩形打包算法</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">TextureChart</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">;</span><span class="w">  </span><span class="c1">// 在图集中的位置</span>
+<span class="p">};</span>
+
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">packCharts</span><span class="p">(</span><span class="n">TextureChart</span><span class="o">*</span><span class="w"> </span><span class="n">charts</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">atlasSize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 使用扫描线算法并行打包</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">scanline</span><span class="p">[</span><span class="n">MAX_ATLAS_WIDTH</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">chartId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 找到最低的可用位置</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">bestY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MAX_ATLAS_HEIGHT</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">bestX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="o">*</span><span class="n">atlasSize</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">charts</span><span class="p">[</span><span class="n">chartId</span><span class="p">].</span><span class="n">width</span><span class="p">;</span><span class="w"> </span><span class="n">x</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">maxY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">charts</span><span class="p">[</span><span class="n">chartId</span><span class="p">].</span><span class="n">width</span><span class="p">;</span><span class="w"> </span><span class="n">w</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">maxY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">maxY</span><span class="p">,</span><span class="w"> </span><span class="n">scanline</span><span class="p">[</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">w</span><span class="p">]);</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">maxY</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">bestY</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">bestY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">maxY</span><span class="p">;</span>
+<span class="w">                </span><span class="n">bestX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">charts</span><span class="p">[</span><span class="n">chartId</span><span class="p">].</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bestX</span><span class="p">;</span>
+<span class="w">        </span><span class="n">charts</span><span class="p">[</span><span class="n">chartId</span><span class="p">].</span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bestY</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 更新扫描线</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">charts</span><span class="p">[</span><span class="n">chartId</span><span class="p">].</span><span class="n">width</span><span class="p">;</span><span class="w"> </span><span class="n">w</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">scanline</span><span class="p">[</span><span class="n">bestX</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">w</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bestY</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">charts</span><span class="p">[</span><span class="n">chartId</span><span class="p">].</span><span class="n">height</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1845-gpu">18.4.5 GPU纹理压缩</h3>
+<p><strong>实时DXT压缩</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">compressDXT1</span><span class="p">(</span><span class="kt">uchar4</span><span class="o">*</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="kt">uint2</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">colors</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">blockX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">blockY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 加载4x4块到共享内存</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blockX</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blockY</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">uchar4</span><span class="w"> </span><span class="n">pixel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span><span class="p">];</span>
+<span class="w">        </span><span class="n">colors</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">make_float3</span><span class="p">(</span><span class="n">pixel</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">pixel</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">pixel</span><span class="p">.</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">255.0f</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// PCA找到主轴</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">mean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeMean</span><span class="p">(</span><span class="n">colors</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">axis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computePrincipalAxis</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span><span class="w"> </span><span class="n">mean</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 投影到主轴找到端点</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">minProj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FLT_MAX</span><span class="p">,</span><span class="w"> </span><span class="n">maxProj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">FLT_MAX</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">minIdx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">maxIdx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">float</span><span class="w"> </span><span class="n">proj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dot</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">mean</span><span class="p">,</span><span class="w"> </span><span class="n">axis</span><span class="p">);</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">proj</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">minProj</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">minProj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">proj</span><span class="p">;</span><span class="w"> </span><span class="n">minIdx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">proj</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">maxProj</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">maxProj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">proj</span><span class="p">;</span><span class="w"> </span><span class="n">maxIdx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 生成调色板</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">c0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">colors</span><span class="p">[</span><span class="n">maxIdx</span><span class="p">];</span>
+<span class="w">        </span><span class="kt">float3</span><span class="w"> </span><span class="n">c1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">colors</span><span class="p">[</span><span class="n">minIdx</span><span class="p">];</span>
+
+<span class="w">        </span><span class="c1">// 编码索引</span>
+<span class="w">        </span><span class="n">uint</span><span class="w"> </span><span class="n">indices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">findClosestColor</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">c0</span><span class="p">,</span><span class="w"> </span><span class="n">c1</span><span class="p">);</span>
+<span class="w">            </span><span class="n">indices</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">));</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 打包输出</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[</span><span class="n">blockY</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">gridDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">blockX</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>
+<span class="w">            </span><span class="n">make_uint2</span><span class="p">(</span><span class="n">packColor565</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="w"> </span><span class="n">c1</span><span class="p">),</span><span class="w"> </span><span class="n">indices</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="185-lod">18.5 LOD（细节层次）生成</h2>
+<h3 id="1851-lod">18.5.1 LOD策略选择</h3>
+<p>不同的LOD策略适用于不同场景。GPU并行化需要考虑各策略的特点：</p>
+<p><strong>离散LOD vs 连续LOD</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">enum</span><span class="w"> </span><span class="n">LODStrategy</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">DISCRETE_LOD</span><span class="p">,</span><span class="w">      </span><span class="c1">// 预生成固定几个级别</span>
+<span class="w">    </span><span class="n">CONTINUOUS_LOD</span><span class="p">,</span><span class="w">    </span><span class="c1">// 实时调整细节</span>
+<span class="w">    </span><span class="n">HLOD</span><span class="p">,</span><span class="w">             </span><span class="c1">// 层次化LOD，用于大规模场景</span>
+<span class="w">    </span><span class="n">PROGRESSIVE_MESH</span><span class="w">  </span><span class="c1">// 渐进式网格</span>
+<span class="p">};</span>
+
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">selectLODLevel</span><span class="p">(</span><span class="n">Object</span><span class="o">*</span><span class="w"> </span><span class="n">objects</span><span class="p">,</span><span class="w"> </span><span class="n">Camera</span><span class="w"> </span><span class="n">camera</span><span class="p">,</span>
+<span class="w">                               </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">lodLevels</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">oid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">objPos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">objects</span><span class="p">[</span><span class="n">oid</span><span class="p">].</span><span class="n">center</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">length</span><span class="p">(</span><span class="n">camera</span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">objPos</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">screenSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">objects</span><span class="p">[</span><span class="n">oid</span><span class="p">].</span><span class="n">radius</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">camera</span><span class="p">.</span><span class="n">fov</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 基于屏幕覆盖率选择LOD</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">screenSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.5f</span><span class="p">)</span><span class="w"> </span><span class="n">lodLevels</span><span class="p">[</span><span class="n">oid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">      </span><span class="c1">// 最高细节</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="p">(</span><span class="n">screenSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.1f</span><span class="p">)</span><span class="w"> </span><span class="n">lodLevels</span><span class="p">[</span><span class="n">oid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="c1">// 中等细节</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="p">(</span><span class="n">screenSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.02f</span><span class="p">)</span><span class="w"> </span><span class="n">lodLevels</span><span class="p">[</span><span class="n">oid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="c1">// 低细节</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="n">lodLevels</span><span class="p">[</span><span class="n">oid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">                        </span><span class="c1">// 最低细节</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1852">18.5.2 渐进网格构建</h3>
+<p><strong>边折叠序列记录</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">CollapseRecord</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">v0</span><span class="p">,</span><span class="w"> </span><span class="n">v1</span><span class="p">;</span><span class="w">           </span><span class="c1">// 折叠的边</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">newPos</span><span class="p">;</span><span class="w">        </span><span class="c1">// 新顶点位置</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">affectedFaces</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span><span class="w"> </span><span class="c1">// 受影响的面</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">numAffected</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">buildProgressiveMesh</span><span class="p">(</span><span class="n">Mesh</span><span class="o">*</span><span class="w"> </span><span class="n">mesh</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                     </span><span class="n">CollapseRecord</span><span class="o">*</span><span class="w"> </span><span class="n">records</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 并行评估所有边的折叠代价</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">costs</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">edges</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">eid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tid</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">costs</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeCollapseCost</span><span class="p">(</span><span class="n">mesh</span><span class="o">-&gt;</span><span class="n">edges</span><span class="p">[</span><span class="n">eid</span><span class="p">]);</span>
+<span class="w">    </span><span class="n">edges</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">eid</span><span class="p">;</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// 块内找最小代价</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">costs</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">costs</span><span class="p">[</span><span class="n">tid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">costs</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">costs</span><span class="p">[</span><span class="n">tid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="p">];</span>
+<span class="w">            </span><span class="n">edges</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edges</span><span class="p">[</span><span class="n">tid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 记录折叠信息</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">bestEdge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edges</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+<span class="w">        </span><span class="n">records</span><span class="p">[</span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createCollapseRecord</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span><span class="w"> </span><span class="n">bestEdge</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>渐进传输优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">ProgressiveStream</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 基础网格</span>
+<span class="w">    </span><span class="kt">float3</span><span class="o">*</span><span class="w"> </span><span class="n">baseVertices</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int3</span><span class="o">*</span><span class="w"> </span><span class="n">baseFaces</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">baseVertCount</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 细化记录（压缩存储）</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">RefinementOp</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">parentVertex</span><span class="p">;</span><span class="w">    </span><span class="c1">// 父顶点索引</span>
+<span class="w">        </span><span class="kt">int8_t</span><span class="w"> </span><span class="n">deltaX</span><span class="p">,</span><span class="w"> </span><span class="n">deltaY</span><span class="p">,</span><span class="w"> </span><span class="n">deltaZ</span><span class="p">;</span><span class="w"> </span><span class="c1">// 位置增量（量化）</span>
+<span class="w">        </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">faceConfig</span><span class="p">;</span><span class="w">       </span><span class="c1">// 面拆分配置</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="o">*</span><span class="n">refinements</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">refineToLevel</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">targetLevel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">currentLevel</span><span class="p">;</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">targetLevel</span><span class="p">;</span><span class="w"> </span><span class="n">level</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">applyRefinement</span><span class="p">(</span><span class="n">refinements</span><span class="p">[</span><span class="n">level</span><span class="p">]);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h3 id="1853">18.5.3 视觉质量度量</h3>
+<p><strong>屏幕空间误差</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">computeScreenSpaceError</span><span class="p">(</span><span class="n">Triangle</span><span class="w"> </span><span class="n">tri</span><span class="p">,</span><span class="w"> </span><span class="n">Camera</span><span class="w"> </span><span class="n">cam</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 投影三角形到屏幕空间</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">p0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">projectToScreen</span><span class="p">(</span><span class="n">tri</span><span class="p">.</span><span class="n">v0</span><span class="p">,</span><span class="w"> </span><span class="n">cam</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">p1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">projectToScreen</span><span class="p">(</span><span class="n">tri</span><span class="p">.</span><span class="n">v1</span><span class="p">,</span><span class="w"> </span><span class="n">cam</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">p2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">projectToScreen</span><span class="p">(</span><span class="n">tri</span><span class="p">.</span><span class="n">v2</span><span class="p">,</span><span class="w"> </span><span class="n">cam</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 计算屏幕空间面积</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">screenArea</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abs</span><span class="p">((</span><span class="n">p1</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">p0</span><span class="p">.</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">p2</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">p0</span><span class="p">.</span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span>
+<span class="w">                          </span><span class="p">(</span><span class="n">p2</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">p0</span><span class="p">.</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">p1</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">p0</span><span class="p">.</span><span class="n">y</span><span class="p">))</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5f</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 计算几何误差</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">geometricError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeHausdorffDistance</span><span class="p">(</span><span class="n">tri</span><span class="p">,</span><span class="w"> </span><span class="n">originalMesh</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 组合度量</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">screenArea</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">geometricError</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>感知质量度量</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">computePerceptualError</span><span class="p">(</span><span class="n">Mesh</span><span class="o">*</span><span class="w"> </span><span class="n">lod</span><span class="p">,</span><span class="w"> </span><span class="n">Mesh</span><span class="o">*</span><span class="w"> </span><span class="n">original</span><span class="p">,</span>
+<span class="w">                                       </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">errors</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">fid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 计算法向量差异</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">lodNormal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeFaceNormal</span><span class="p">(</span><span class="n">lod</span><span class="o">-&gt;</span><span class="n">faces</span><span class="p">[</span><span class="n">fid</span><span class="p">]);</span>
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">origNormal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">findClosestNormal</span><span class="p">(</span><span class="n">original</span><span class="p">,</span><span class="w"> </span><span class="n">lod</span><span class="o">-&gt;</span><span class="n">faces</span><span class="p">[</span><span class="n">fid</span><span class="p">]);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">normalError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">dot</span><span class="p">(</span><span class="n">lodNormal</span><span class="p">,</span><span class="w"> </span><span class="n">origNormal</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 计算轮廓保持度</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">silhouetteError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeSilhouetteDeviation</span><span class="p">(</span><span class="n">lod</span><span class="p">,</span><span class="w"> </span><span class="n">original</span><span class="p">,</span><span class="w"> </span><span class="n">fid</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 计算纹理坐标畸变</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">uvDistortion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computeUVDistortion</span><span class="p">(</span><span class="n">lod</span><span class="o">-&gt;</span><span class="n">faces</span><span class="p">[</span><span class="n">fid</span><span class="p">]);</span>
+
+<span class="w">    </span><span class="c1">// 加权组合</span>
+<span class="w">    </span><span class="n">errors</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.4f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">normalError</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>
+<span class="w">                  </span><span class="mf">0.4f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">silhouetteError</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>
+<span class="w">                  </span><span class="mf">0.2f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">uvDistortion</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1854-lod">18.5.4 实时LOD切换</h3>
+<p><strong>无缝过渡技术</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">blendLODs</span><span class="p">(</span><span class="n">Vertex</span><span class="o">*</span><span class="w"> </span><span class="n">lod0</span><span class="p">,</span><span class="w"> </span><span class="n">Vertex</span><span class="o">*</span><span class="w"> </span><span class="n">lod1</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                          </span><span class="kt">float</span><span class="w"> </span><span class="n">blendFactor</span><span class="p">,</span><span class="w"> </span><span class="n">Vertex</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">vid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 找到对应顶点</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">vid1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">findCorrespondingVertex</span><span class="p">(</span><span class="n">vid</span><span class="p">,</span><span class="w"> </span><span class="n">lod0</span><span class="p">,</span><span class="w"> </span><span class="n">lod1</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">vid1</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 线性插值位置和法向</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lerp</span><span class="p">(</span><span class="n">lod0</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">position</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                   </span><span class="n">lod1</span><span class="p">[</span><span class="n">vid1</span><span class="p">].</span><span class="n">position</span><span class="p">,</span><span class="w"> </span><span class="n">blendFactor</span><span class="p">);</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">normal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">lerp</span><span class="p">(</span><span class="n">lod0</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">normal</span><span class="p">,</span>
+<span class="w">                                           </span><span class="n">lod1</span><span class="p">[</span><span class="n">vid1</span><span class="p">].</span><span class="n">normal</span><span class="p">,</span><span class="w"> </span><span class="n">blendFactor</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 渐隐处理孤立顶点</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[</span><span class="n">vid</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lod0</span><span class="p">[</span><span class="n">vid</span><span class="p">];</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">blendFactor</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>地理裁剪LOD（Geomorphing）</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">geomorphLOD</span><span class="p">(</span><span class="n">Vertex</span><span class="o">*</span><span class="w"> </span><span class="n">vertices</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">morphWeights</span><span class="p">,</span>
+<span class="w">                            </span><span class="kt">float3</span><span class="o">*</span><span class="w"> </span><span class="n">targetPositions</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">vid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">morphWeights</span><span class="p">[</span><span class="n">vid</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 平滑过渡到目标位置</span>
+<span class="w">    </span><span class="n">vertices</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vertices</span><span class="p">[</span><span class="n">vid</span><span class="p">].</span><span class="n">position</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>
+<span class="w">                             </span><span class="n">targetPositions</span><span class="p">[</span><span class="n">vid</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">t</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 重新计算法向量</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.01f</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">recomputeVertexNormal</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vertices</span><span class="p">[</span><span class="n">vid</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="1855">18.5.5 内存管理优化</h3>
+<p><strong>LOD缓存策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">LODCache</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">CacheEntry</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">objectId</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">lodLevel</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">gpuData</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">timestamp</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">refCount</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="n">CacheEntry</span><span class="o">*</span><span class="w"> </span><span class="n">entries</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">lruList</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">fetchLOD</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">objId</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">hash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">objId</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">31</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">CACHE_SIZE</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 检查缓存命中</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">entries</span><span class="p">[</span><span class="n">hash</span><span class="p">].</span><span class="n">objectId</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">objId</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>
+<span class="w">           </span><span class="n">entries</span><span class="p">[</span><span class="n">hash</span><span class="p">].</span><span class="n">lodLevel</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">entries</span><span class="p">[</span><span class="n">hash</span><span class="p">].</span><span class="n">refCount</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="n">updateLRU</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">entries</span><span class="p">[</span><span class="n">hash</span><span class="p">].</span><span class="n">gpuData</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 缓存未命中，触发异步加载</span>
+<span class="w">        </span><span class="n">requestAsyncLoad</span><span class="p">(</span><span class="n">objId</span><span class="p">,</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">hash</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">nullptr</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">evictLRU</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">victim</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lruList</span><span class="p">[</span><span class="n">CACHE_SIZE</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">entries</span><span class="p">[</span><span class="n">victim</span><span class="p">].</span><span class="n">refCount</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">freeGPUMemory</span><span class="p">(</span><span class="n">entries</span><span class="p">[</span><span class="n">victim</span><span class="p">].</span><span class="n">gpuData</span><span class="p">);</span>
+<span class="w">            </span><span class="n">entries</span><span class="p">[</span><span class="n">victim</span><span class="p">].</span><span class="n">objectId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>流式LOD加载</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">streamLODData</span><span class="p">(</span><span class="n">LODRequest</span><span class="o">*</span><span class="w"> </span><span class="n">requests</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">numRequests</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">rid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">rid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">numRequests</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">LODRequest</span><span class="w"> </span><span class="n">req</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">requests</span><span class="p">[</span><span class="n">rid</span><span class="p">];</span>
+
+<span class="w">        </span><span class="c1">// 计算需要的内存</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">vertexCount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getVertexCount</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">objId</span><span class="p">,</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">level</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">faceCount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getFaceCount</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">objId</span><span class="p">,</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">level</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 分配GPU内存</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">gpuMem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocateFromPool</span><span class="p">(</span><span class="n">vertexCount</span><span class="p">,</span><span class="w"> </span><span class="n">faceCount</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 异步传输数据</span>
+<span class="w">        </span><span class="n">cudaMemcpyAsync</span><span class="p">(</span><span class="n">gpuMem</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                       </span><span class="n">getLODData</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">objId</span><span class="p">,</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">level</span><span class="p">),</span>
+<span class="w">                       </span><span class="n">getDataSize</span><span class="p">(</span><span class="n">vertexCount</span><span class="p">,</span><span class="w"> </span><span class="n">faceCount</span><span class="p">),</span>
+<span class="w">                       </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">,</span>
+<span class="w">                       </span><span class="n">req</span><span class="p">.</span><span class="n">stream</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 更新缓存</span>
+<span class="w">        </span><span class="n">updateCache</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">objId</span><span class="p">,</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">gpuMem</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="_1">本章小结</h2>
+<p>本章深入探讨了大规模点云重建与网格化的GPU加速技术。我们学习了：</p>
+<ol>
+<li><strong>Poisson重建加速</strong>：通过八叉树并行构建、稀疏线性系统的GPU求解，实现了40倍以上的加速比</li>
+<li><strong>Marching Cubes并行化</strong>：使用两遍扫描、流压缩和查找表优化，高效生成三角网格</li>
+<li><strong>网格简化优化</strong>：实现了GPU友好的边折叠算法，包括QEM误差度量和拓扑保持</li>
+<li><strong>纹理映射技术</strong>：掌握了UV参数化、多视图融合、接缝消除等关键技术</li>
+<li><strong>LOD系统设计</strong>：构建了完整的多细节层次系统，支持渐进传输和实时切换</li>
+</ol>
+<p>关键性能指标：</p>
+<ul>
+<li>Poisson重建：1000万点 ~2.5秒（RTX 4090）</li>
+<li>Marching Cubes：512³体素 ~50ms</li>
+<li>网格简化：100万面简化到10万面 ~200ms</li>
+<li>LOD切换：&lt;1ms延迟，支持上千个对象</li>
+</ul>
+<h2 id="_2">练习题</h2>
+<h3 id="_3">基础题</h3>
+<ol>
+<li><strong>八叉树构建优化</strong>
+   实现一个并行的自适应八叉树构建算法，要求支持不均匀点云分布。</li>
+</ol>
+<p><strong>提示</strong>：使用Morton编码进行空间排序，利用原子操作处理节点分裂。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   使用Z-order曲线将3D坐标映射到1D，先对点进行排序，然后并行构建节点。关键是使用原子操作atomicMax来确定每个节点的细分深度，避免竞争条件。采用自底向上的构建策略，先创建叶节点，再合并生成父节点。
+   </details>
+<ol start="2">
+<li><strong>Marching Cubes查找表生成</strong>
+   编写代码自动生成Marching Cubes的256种配置查找表。</li>
+</ol>
+<p><strong>提示</strong>：利用对称性减少独立配置数量。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   256种配置实际只有15种基本情况，其余通过旋转和镜像变换得到。首先生成15种基本配置的三角形模板，然后通过24种对称变换（8个顶点的置换）生成完整查找表。使用位操作快速计算配置索引。
+   </details>
+<ol start="3">
+<li><strong>简单QEM实现</strong>
+   实现基本的二次误差度量计算，用于评估边折叠代价。</li>
+</ol>
+<p><strong>提示</strong>：QEM可以表示为4x4对称矩阵。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   每个顶点关联一个4x4的二次型矩阵Q，表示到相邻平面的距离平方和。边折叠时，新顶点的Q矩阵是两个端点Q矩阵之和。折叠代价通过求解线性系统∇(v^T Q v) = 0得到最优位置，再计算该位置的误差值。
+   </details>
+<h3 id="_4">挑战题</h3>
+<ol start="4">
+<li><strong>并行Poisson求解器</strong>
+   实现一个高效的GPU多重网格求解器，用于Poisson重建。</li>
+</ol>
+<p><strong>提示</strong>：使用红黑Gauss-Seidel作为平滑器。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   实现V-cycle多重网格，每层使用红黑着色的Gauss-Seidel迭代。红黑着色允许并行更新同色节点。限制和延拓操作使用三线性插值。粗网格直接求解使用共轭梯度法。关键优化包括：纹理内存缓存系数矩阵，共享内存缓存模板值，使用shuffle指令加速归约。
+   </details>
+<ol start="5">
+<li><strong>实时网格简化系统</strong>
+   设计一个支持视点相关简化的实时系统，能根据观察角度动态调整网格细节。</li>
+</ol>
+<p><strong>提示</strong>：结合屏幕空间误差和几何误差。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   使用双缓冲机制，一个用于渲染，一个用于简化。根据视点计算每个面的重要性分数，优先简化背向面和远处细节。使用GPU优先队列管理边折叠操作，每帧限制操作数量保证实时性。实现增量式更新，避免全局重建。
+   </details>
+<ol start="6">
+<li><strong>无缝纹理图集生成</strong>
+   实现一个GPU加速的纹理图集打包算法，最小化纹理浪费并消除接缝。</li>
+</ol>
+<p><strong>提示</strong>：使用最大矩形算法和Poisson混合。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   先使用并行的最大矩形算法找到最优打包方案，每个线程负责一个chart的放置。使用扫描线算法维护可用空间。对于接缝，在chart边界扩展几个像素，使用Poisson方程混合相邻chart的颜色。最后使用mipmap金字塔填充未使用区域，避免采样错误。
+   </details>
+<ol start="7">
+<li><strong>HLOD自动生成</strong>
+   实现层次化LOD（HLOD）系统，自动合并远处的多个对象。</li>
+</ol>
+<p><strong>提示</strong>：使用空间聚类和代理几何体。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   使用八叉树或KD树进行空间划分，每个节点存储子对象的简化版本。当节点覆盖的屏幕空间小于阈值时，用单个代理几何体替换所有子对象。代理几何体通过体素化和Marching Cubes生成。使用impostor技术为极远距离的对象群生成billboard。
+   </details>
+<ol start="8">
+<li><strong>GPU加速的网格修复</strong>
+   设计一个自动修复网格拓扑错误的GPU算法，处理孔洞、自相交等问题。</li>
+</ol>
+<p><strong>提示</strong>：使用体素化检测和修复拓扑问题。</p>
+<details markdown="block">
+   <summary markdown="off">参考答案</summary>
+
+   首先体素化网格得到水密的距离场，然后用Marching Cubes重新提取表面。对于小孔洞，使用advancing front方法并行填充。对于自相交，通过射线投射检测并使用BSP树分割相交面。使用并行的连通分量标记算法移除孤立的小部件。最后运行Laplacian平滑改善网格质量。
+   </details>
+<h2 id="_5">常见陷阱与错误</h2>
+<ol>
+<li>
+<p><strong>八叉树遍历的内存访问模式</strong>
+   - 错误：随机访问导致缓存未命中率高
+   - 正确：使用Morton顺序改善空间局部性</p>
+</li>
+<li>
+<p><strong>Marching Cubes的重复顶点</strong>
+   - 错误：每个体素独立生成顶点，造成大量重复
+   - 正确：使用哈希表或边索引去重</p>
+</li>
+<li>
+<p><strong>网格简化的拓扑破坏</strong>
+   - 错误：盲目折叠边导致非流形结构
+   - 正确：实施链接条件检查</p>
+</li>
+<li>
+<p><strong>纹理接缝的可见性</strong>
+   - 错误：简单的线性混合在光照下仍可见
+   - 正确：使用Poisson混合或图割优化</p>
+</li>
+<li>
+<p><strong>LOD切换的突变</strong>
+   - 错误：直接切换造成明显跳变
+   - 正确：使用geomorphing或alpha混合</p>
+</li>
+<li>
+<p><strong>内存泄漏和碎片化</strong>
+   - 错误：频繁的cudaMalloc/cudaFree
+   - 正确：使用内存池和压缩策略</p>
+</li>
+</ol>
+<h2 id="_6">最佳实践检查清单</h2>
+<h3 id="_7">算法选择</h3>
+<ul>
+<li>[ ] 根据输入数据特点选择合适的重建算法</li>
+<li>[ ] 评估质量vs速度的权衡</li>
+<li>[ ] 考虑内存限制选择合适的数据结构</li>
+</ul>
+<h3 id="_8">性能优化</h3>
+<ul>
+<li>[ ] 使用纹理内存缓存只读数据</li>
+<li>[ ] 合并内存访问，使用向量化load/store</li>
+<li>[ ] 平衡寄存器使用和占用率</li>
+<li>[ ] 实现多流并发和异步操作</li>
+</ul>
+<h3 id="_9">质量保证</h3>
+<ul>
+<li>[ ] 实施拓扑一致性检查</li>
+<li>[ ] 验证法向量方向正确性</li>
+<li>[ ] 测试极端情况（退化三角形、孤立顶点等）</li>
+<li>[ ] 确保数值稳定性</li>
+</ul>
+<h3 id="_10">内存管理</h3>
+<ul>
+<li>[ ] 实现内存池避免碎片化</li>
+<li>[ ] 使用流压缩移除无效元素</li>
+<li>[ ] 监控GPU内存使用情况</li>
+<li>[ ] 实施内存预算控制</li>
+</ul>
+<h3 id="_11">系统集成</h3>
+<ul>
+<li>[ ] 设计清晰的API接口</li>
+<li>[ ] 提供同步和异步两种模式</li>
+<li>[ ] 实现错误恢复机制</li>
+<li>[ ] 支持增量式更新</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter17.html" class="nav-link prev">← 第17章：强化学习推理加速</a><a href="chapter19.html" class="nav-link next">第19章：多GPU编程与扩展 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

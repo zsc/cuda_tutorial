@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>CUDA 高性能编程实战教程</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item active" >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="cuda">CUDA 高性能编程实战教程</h1>
+<h2 id="_1">关于本教程</h2>
+<p>本教程面向经验丰富的程序员和AI科学家，深入探讨CUDA编程的高级优化技术。通过自动驾驶和具身智能的实际案例，你将掌握从底层硬件优化到高层抽象框架的全方位技能。</p>
+<h3 id="_2">学习目标</h3>
+<ul>
+<li>掌握CUDA内存层次结构与优化策略</li>
+<li>精通warp级编程与协作组技术</li>
+<li>理解并应用高级优化技巧（bank conflict规避、向量化访存、PTX内联等）</li>
+<li>熟练使用CUTLASS等高性能库</li>
+<li>在真实AI场景中实现10x-100x的性能提升</li>
+</ul>
+<h3 id="_3">先修要求</h3>
+<ul>
+<li>熟练的C++编程能力</li>
+<li>基础的并行计算概念</li>
+<li>线性代数基础</li>
+<li>对深度学习有基本了解</li>
+</ul>
+<h2 id="_4">目录</h2>
+<h3 id="_5">第一部分：基础架构与编程模型</h3>
+<h4 id="1cuda"><a href="chapter1.html">第1章：CUDA硬件架构深度剖析</a></h4>
+<ul>
+<li>GPU架构演进：从Volta到Hopper</li>
+<li>SM（流多处理器）内部结构</li>
+<li>Warp调度机制与占用率分析</li>
+<li>内存层次结构概览</li>
+<li>性能分析工具链（Nsight Compute/Systems）</li>
+</ul>
+<h4 id="2cuda"><a href="chapter2.html">第2章：CUDA编程模型与执行模型</a></h4>
+<ul>
+<li>线程层次结构与网格配置</li>
+<li>内核启动与动态并行</li>
+<li>流与事件机制</li>
+<li>统一内存与虚拟内存管理</li>
+<li>错误处理与调试技术</li>
+</ul>
+<h3 id="_6">第二部分：内存优化与数据移动</h3>
+<h4 id="3"><a href="chapter3.html">第3章：全局内存优化策略</a></h4>
+<ul>
+<li>内存合并访问模式</li>
+<li>缓存行为与配置</li>
+<li>向量化load/store操作</li>
+<li>内存带宽优化</li>
+<li>案例：高带宽矩阵转置</li>
+</ul>
+<h4 id="4bank-conflict"><a href="chapter4.html">第4章：共享内存与Bank Conflict</a></h4>
+<ul>
+<li>共享内存架构详解</li>
+<li>Bank conflict的本质与检测</li>
+<li>规避策略：padding、swizzling、permutation</li>
+<li>双缓冲与流水线技术</li>
+<li>案例：高性能矩阵乘法的共享内存优化</li>
+</ul>
+<h4 id="5"><a href="chapter5.html">第5章：寄存器优化与常量内存</a></h4>
+<ul>
+<li>寄存器分配与压力分析</li>
+<li>寄存器重用与别名技术</li>
+<li>常量内存与纹理内存使用</li>
+<li>联合体与位操作优化</li>
+<li>案例：寄存器级的卷积优化</li>
+</ul>
+<h3 id="_7">第三部分：线程协作与同步</h3>
+<h4 id="6warp"><a href="chapter6.html">第6章：Warp级编程与协作组</a></h4>
+<ul>
+<li>Warp内在函数（shuffle、vote、match）</li>
+<li>协作组（Cooperative Groups）编程</li>
+<li>Warp级归约与扫描算法</li>
+<li>独立线程调度（Independent Thread Scheduling）</li>
+<li>案例：无锁数据结构实现</li>
+</ul>
+<h4 id="7"><a href="chapter7.html">第7章：原子操作与同步原语</a></h4>
+<ul>
+<li>原子操作的硬件实现</li>
+<li>自定义原子操作</li>
+<li>内存栅栏与一致性模型</li>
+<li>自旋锁与无锁算法</li>
+<li>案例：高并发哈希表实现</li>
+</ul>
+<h3 id="_8">第四部分：高级优化技术</h3>
+<h4 id="8ptx"><a href="chapter8.html">第8章：PTX内联与底层优化</a></h4>
+<ul>
+<li>PTX汇编语言基础</li>
+<li>内联PTX的使用场景</li>
+<li>特殊寄存器访问</li>
+<li>自定义浮点运算</li>
+<li>案例：超低延迟的特殊函数实现</li>
+</ul>
+<h4 id="9"><a href="chapter9.html">第9章：张量核心与混合精度计算</a></h4>
+<ul>
+<li>Tensor Core架构与编程</li>
+<li>WMMA API详解</li>
+<li>混合精度训练策略</li>
+<li>数值稳定性保证</li>
+<li>案例：Transformer模型的张量核心加速</li>
+</ul>
+<h4 id="10cutlass"><a href="chapter10.html">第10章：CUTLASS深度解析</a></h4>
+<ul>
+<li>CUTLASS架构与抽象层次</li>
+<li>自定义GEMM内核</li>
+<li>Epilogue融合优化</li>
+<li>布局转换与数据移动</li>
+<li>案例：定制化的卷积算子实现</li>
+</ul>
+<h3 id="_9">第五部分：自动驾驶场景案例</h3>
+<h4 id="11"><a href="chapter11.html">第11章：激光雷达点云处理加速</a></h4>
+<ul>
+<li>点云数据结构与特征</li>
+<li>KD-Tree/Octree并行构建</li>
+<li>最近邻搜索优化</li>
+<li>点云配准算法（ICP/NDT）</li>
+<li>实时3D目标检测（PointPillars/CenterPoint）</li>
+</ul>
+<h4 id="12"><a href="chapter12.html">第12章：多传感器融合的并行化</a></h4>
+<ul>
+<li>相机-激光雷达标定与融合</li>
+<li>时间同步与数据关联</li>
+<li>并行粒子滤波器</li>
+<li>GPU加速的卡尔曼滤波</li>
+<li>BEV（鸟瞰图）特征提取与融合</li>
+</ul>
+<h4 id="13"><a href="chapter13.html">第13章：实时语义分割与实例分割</a></h4>
+<ul>
+<li>高分辨率图像的分块处理</li>
+<li>深度可分离卷积优化</li>
+<li>NMS（非极大值抑制）并行化</li>
+<li>Mask生成与后处理</li>
+<li>多尺度特征融合策略</li>
+</ul>
+<h4 id="14"><a href="chapter14.html">第14章：路径规划与轨迹优化</a></h4>
+<ul>
+<li>A<em>与RRT</em>的GPU并行化</li>
+<li>批量轨迹采样与评估</li>
+<li>动态规划的并行实现</li>
+<li>二次规划求解器</li>
+<li>实时避障与轨迹平滑</li>
+</ul>
+<h3 id="_10">第六部分：具身智能场景案例</h3>
+<h4 id="15slamgpu"><a href="chapter15.html">第15章：视觉SLAM的GPU加速</a></h4>
+<ul>
+<li>特征提取与匹配（ORB/SuperPoint）</li>
+<li>光束平差法（Bundle Adjustment）并行化</li>
+<li>位姿图优化</li>
+<li>稠密建图与TSDF融合</li>
+<li>回环检测加速</li>
+</ul>
+<h4 id="16"><a href="chapter16.html">第16章：机械臂运动规划</a></h4>
+<ul>
+<li>正逆运动学并行求解</li>
+<li>碰撞检测的空间哈希</li>
+<li>RRT-Connect的GPU实现</li>
+<li>轨迹优化（CHOMP/TrajOpt）</li>
+<li>多机械臂协调控制</li>
+</ul>
+<h4 id="17"><a href="chapter17.html">第17章：强化学习推理加速</a></h4>
+<ul>
+<li>批量环境仿真</li>
+<li>神经网络推理优化</li>
+<li>蒙特卡洛树搜索并行化</li>
+<li>经验回放缓冲区管理</li>
+<li>PPO/SAC算法的GPU实现</li>
+</ul>
+<h4 id="18"><a href="chapter18.html">第18章：大规模点云重建与网格化</a></h4>
+<ul>
+<li>Poisson重建的GPU加速</li>
+<li>Marching Cubes并行化</li>
+<li>网格简化与优化</li>
+<li>纹理映射与混合</li>
+<li>LOD（细节层次）生成</li>
+</ul>
+<h3 id="_11">第七部分：系统级优化与部署</h3>
+<h4 id="19gpu"><a href="chapter19.html">第19章：多GPU编程与扩展</a></h4>
+<ul>
+<li>NCCL通信原语</li>
+<li>数据并行与模型并行</li>
+<li>Pipeline并行策略</li>
+<li>异构系统优化</li>
+<li>案例：分布式训练系统</li>
+</ul>
+<h4 id="20cuda-graph"><a href="chapter20.html">第20章：CUDA Graph与内核融合</a></h4>
+<ul>
+<li>CUDA Graph构建与优化</li>
+<li>内核融合策略</li>
+<li>自动调优框架</li>
+<li>JIT编译优化</li>
+<li>案例：端到端推理优化</li>
+</ul>
+<h4 id="21gpujetson"><a href="chapter21.html">第21章：嵌入式GPU开发（Jetson）</a></h4>
+<ul>
+<li>Jetson架构特点</li>
+<li>功耗优化策略</li>
+<li>统一内存的最佳实践</li>
+<li>TensorRT集成</li>
+<li>案例：边缘AI部署</li>
+</ul>
+<h3 id="_12">第八部分：前沿技术与未来展望</h3>
+<h4 id="22"><a href="chapter22.html">第22章：稀疏计算与动态稀疏</a></h4>
+<ul>
+<li>稀疏矩阵格式（CSR/COO/ELL）</li>
+<li>cuSPARSE高级用法</li>
+<li>2:4结构化稀疏</li>
+<li>动态稀疏网络</li>
+<li>案例：稀疏Transformer加速</li>
+</ul>
+<h4 id="23"><a href="chapter23.html">第23章：量化与低精度计算</a></h4>
+<ul>
+<li>INT8/INT4量化技术</li>
+<li>量化感知训练</li>
+<li>动态量化策略</li>
+<li>自定义量化算子</li>
+<li>案例：超低比特推理</li>
+</ul>
+<h4 id="24gpu"><a href="chapter24.html">第24章：新一代GPU特性展望</a></h4>
+<ul>
+<li>Hopper架构新特性</li>
+<li>异步执行与TMA</li>
+<li>分布式共享内存</li>
+<li>可编程的L2缓存</li>
+<li>未来技术趋势</li>
+</ul>
+<h3 id="_13">第九部分：调试、优化与工程实践</h3>
+<h4 id="25"><a href="chapter25.html">第25章：性能分析与调优方法论</a></h4>
+<ul>
+<li>性能瓶颈识别流程</li>
+<li>Roofline模型分析</li>
+<li>内存访问模式优化</li>
+<li>占用率与寄存器平衡</li>
+<li>指令级并行优化</li>
+<li>案例：从10x到100x的优化历程</li>
+</ul>
+<h4 id="26cuda"><a href="chapter26.html">第26章：CUDA调试技术与错误处理</a></h4>
+<ul>
+<li>cuda-gdb与cuda-memcheck使用</li>
+<li>竞态条件检测与修复</li>
+<li>死锁分析与预防</li>
+<li>内存错误定位（越界、泄漏）</li>
+<li>数值精度问题调试</li>
+<li>案例：复杂系统的调试实战</li>
+</ul>
+<h4 id="27"><a href="chapter27.html">第27章：开发环境与工具链配置</a></h4>
+<ul>
+<li>CUDA工具链深度配置</li>
+<li>nvcc编译选项优化</li>
+<li>CMake与构建系统集成</li>
+<li>Nsight全家族工具精通</li>
+<li>CI/CD流水线搭建</li>
+<li>案例：大型项目的工程化实践</li>
+</ul>
+<h2 id="_14">附录</h2>
+<h3 id="_15"><a href="appendix.html">附录：参考资源与进阶阅读</a></h3>
+<ul>
+<li>官方文档索引</li>
+<li>学术论文推荐</li>
+<li>开源项目分析</li>
+<li>社区资源汇总</li>
+</ul>
+<h2 id="_16">如何使用本教程</h2>
+<ol>
+<li><strong>循序渐进</strong>：建议按章节顺序学习基础部分（第1-10章）</li>
+<li><strong>案例驱动</strong>：根据你的应用场景，选择相关案例深入学习</li>
+<li><strong>动手实践</strong>：每章的练习题都经过精心设计，请务必完成</li>
+<li><strong>性能对比</strong>：使用提供的基准测试代码，验证优化效果</li>
+<li><strong>查阅附录</strong>：遇到问题时，附录提供了丰富的排查资源</li>
+</ol>
+<h2 id="_17">代码仓库</h2>
+<p>所有示例代码、练习题答案和基准测试程序都在配套的GitHub仓库中：</p>
+<div class="codehilite"><pre><span></span><code>https://github.com/your-repo/cuda-tutorial
+</code></pre></div>
+
+<h2 id="_18">版本更新</h2>
+<ul>
+<li>v1.0 (2024.01): 初始版本发布</li>
+<li>v1.1 (2024.06): 添加Hopper架构支持，更新CUTLASS 3.0内容</li>
+<li>v1.2 (2024.12): 新增具身智能案例，优化练习题设计</li>
+</ul>
+<h2 id="_19">作者与贡献</h2>
+<p>本教程由CUDA社区共同维护，欢迎提交Issue和Pull Request。</p>
+<h2 id="_20">版权声明</h2>
+<p>本教程采用 CC BY-NC-SA 4.0 协议发布。</p>
+<hr />
+<p>准备好开启CUDA高性能编程之旅了吗？让我们从<a href="chapter1.html">第1章</a>开始！</p>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter1.html" class="nav-link next">第1章：CUDA硬件架构深度剖析 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

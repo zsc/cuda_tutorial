@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第14章：路径规划与轨迹优化</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="14">第14章：路径规划与轨迹优化</h1>
+<p>本章深入探讨自动驾驶中路径规划与轨迹优化的GPU并行化技术。我们将学习如何将传统的串行规划算法改造为高效的并行版本，实现实时的路径搜索、轨迹生成和动态避障。通过批量化处理和并行求解技术，将规划系统的响应时间从秒级降低到毫秒级，满足自动驾驶的实时性要求。</p>
+<h2 id="141-arrtgpu">14.1 A<em>与RRT</em>的GPU并行化</h2>
+<h3 id="1411-a">14.1.1 并行A*算法架构</h3>
+<p>传统A*算法的串行特性主要体现在逐个扩展节点的过程中。GPU并行化的核心思想是同时扩展多个前沿节点，将搜索树的广度优先特性充分利用起来。</p>
+<div class="codehilite"><pre><span></span><code>串行<span class="n">A</span><span class="o">*</span>的瓶颈：
+<span class="nf">while </span><span class="p">(</span><span class="o">!</span><span class="nf">openSet.empty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">openSet.top</span><span class="p">();</span><span class="w">  </span><span class="o">//</span><span class="w"> </span>串行选择
+<span class="w">    </span><span class="nf">expand</span><span class="p">(</span><span class="n">current</span><span class="p">);</span><span class="w">           </span><span class="o">//</span><span class="w"> </span>串行扩展
+<span class="w">    </span><span class="nf">updateNeighbors</span><span class="p">();</span><span class="w">         </span><span class="o">//</span><span class="w"> </span>串行更新
+<span class="p">}</span>
+
+并行<span class="n">A</span><span class="o">*</span>的架构：
+┌─────────────────────────────────────┐
+│<span class="w">         </span><span class="n">Open</span><span class="w"> </span><span class="nf">Set </span><span class="p">(</span><span class="n">GPU</span><span class="w"> </span><span class="n">Memory</span><span class="p">)</span><span class="w">        </span>│
+│<span class="w">  </span>┌────┬────┬────┬────┬────┬────┐<span class="w">   </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="n">N1</span><span class="w"> </span>│<span class="w"> </span><span class="n">N2</span><span class="w"> </span>│<span class="w"> </span><span class="n">N3</span><span class="w"> </span>│<span class="w"> </span><span class="n">N4</span><span class="w"> </span>│<span class="kc">...</span><span class="w"> </span>│<span class="w"> </span><span class="n">Nn</span><span class="w"> </span>│<span class="w">   </span>│<span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span>批量节点
+│<span class="w">  </span>└────┴────┴────┴────┴────┴────┘<span class="w">   </span>│
+└─────────────┬───────────────────────┘
+<span class="w">              </span>│<span class="w"> </span><span class="n">Parallel</span><span class="w"> </span><span class="n">Expansion</span>
+<span class="w">    </span>┌─────────▼───────────┐
+<span class="w">    </span>│<span class="w">   </span><span class="n">Thread</span><span class="w"> </span><span class="n">Block</span><span class="w"> </span><span class="m">1</span><span class="w">    </span>│<span class="w"> </span><span class="n">Thread</span><span class="w"> </span><span class="n">Block</span><span class="w"> </span><span class="m">2</span><span class="w">  </span><span class="kc">...</span>
+<span class="w">    </span>│<span class="w">  </span>┌──┬──┬──┬──┬──┐<span class="w"> </span>│<span class="w"> </span>┌──┬──┬──┬──┬──┐
+<span class="w">    </span>│<span class="w">  </span>│<span class="n">T0</span>│<span class="n">T1</span>│<span class="n">T2</span>│<span class="n">..</span>│<span class="n">Tn</span>│<span class="w"> </span>│<span class="w"> </span>│<span class="n">T0</span>│<span class="n">T1</span>│<span class="n">T2</span>│<span class="n">..</span>│<span class="n">Tn</span>│
+<span class="w">    </span>│<span class="w">  </span>└──┴──┴──┴──┴──┘<span class="w"> </span>│<span class="w"> </span>└──┴──┴──┴──┴──┘
+<span class="w">    </span>└─────────────────────┘
+</code></pre></div>
+
+<p>并行化的关键技术点：</p>
+<ol>
+<li><strong>前沿节点批量选择</strong>：使用并行堆或优先队列，每次选择K个最优节点</li>
+<li><strong>冲突解决</strong>：多个线程可能同时访问同一节点，需要原子操作保证一致性</li>
+<li><strong>负载均衡</strong>：不同节点的扩展代价不同，使用工作窃取策略均衡负载</li>
+</ol>
+<h3 id="1412">14.1.2 并行优先队列实现</h3>
+<p>GPU上的高效优先队列是并行A*的核心数据结构。我们采用基于二叉堆的并行实现：</p>
+<div class="codehilite"><pre><span></span><code>并行堆操作原理：
+
+插入操作（<span class="n">Parallel</span><span class="w"> </span><span class="n">Insert</span>）：
+<span class="n">Level</span><span class="w"> </span><span class="m">0</span><span class="o">:</span><span class="w">     </span><span class="p">[</span><span class="m">8</span><span class="p">]</span><span class="w">              </span><span class="o">&lt;-</span><span class="w"> </span>根节点
+<span class="w">            </span><span class="o">/</span><span class="w">     </span>\
+<span class="n">Level</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="w">  </span><span class="p">[</span><span class="m">12</span><span class="p">]</span><span class="w">    </span><span class="p">[</span><span class="m">15</span><span class="p">]</span><span class="w">         </span><span class="o">&lt;-</span><span class="w"> </span>可并行
+<span class="w">         </span><span class="o">/</span><span class="w">   </span>\<span class="w">   </span><span class="o">/</span><span class="w">   </span>\
+<span class="n">Level</span><span class="w"> </span><span class="m">2</span><span class="o">:</span><span class="p">[</span><span class="m">20</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="m">25</span><span class="p">][</span><span class="m">18</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="m">22</span><span class="p">]</span><span class="w">     </span><span class="o">&lt;-</span><span class="w"> </span>可并行
+
+每层可以并行处理，层间需要同步
+使用<span class="w"> </span>__<span class="nf">syncthreads</span><span class="p">()</span><span class="w"> </span>保证层级一致性
+</code></pre></div>
+
+<p>关键优化技术：</p>
+<ol>
+<li><strong>批量堆化（Batch Heapify）</strong>：一次性调整多个元素，减少同步开销</li>
+<li><strong>分层并行</strong>：同一层的所有节点可以并行比较和交换</li>
+<li><strong>局部排序</strong>：在共享内存中维护小堆，定期与全局堆合并</li>
+</ol>
+<h3 id="1413-rrtgpu">14.1.3 RRT*的GPU加速策略</h3>
+<p>RRT*（Rapidly-exploring Random Tree Star）的并行化主要在于：</p>
+<ol>
+<li><strong>批量采样</strong>：一次生成大量随机点，使用cuRAND库</li>
+<li><strong>并行最近邻搜索</strong>：使用空间哈希或KD-Tree加速</li>
+<li><strong>批量碰撞检测</strong>：将环境栅格化，使用纹理内存加速查询</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">RRT</span><span class="o">*</span>并行化流程：
+
+┌──────────────┐
+│<span class="w"> </span><span class="n">Random</span><span class="w"> </span><span class="n">Sample</span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>批量生成<span class="n">N个采样点</span>
+│<span class="w">  </span><span class="n">Generation</span><span class="w">  </span>│<span class="w">    </span><span class="n">cuRAND并行随机数</span>
+└──────┬───────┘
+<span class="w">       </span>│
+┌──────▼───────┐
+│<span class="n">Nearest</span><span class="w"> </span><span class="n">Neighbor</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>并行<span class="n">KNN搜索</span>
+│<span class="w">    </span><span class="n">Search</span><span class="w">     </span>│<span class="w">    </span>每个采样点独立查找
+└──────┬───────┘
+<span class="w">       </span>│
+┌──────▼───────┐
+│<span class="w">  </span><span class="n">Collision</span><span class="w">   </span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>批量射线检测
+│<span class="w">   </span><span class="n">Detection</span><span class="w">  </span>│<span class="w">    </span>使用<span class="m">3</span><span class="n">D纹理加速</span>
+└──────┬───────┘
+<span class="w">       </span>│
+┌──────▼───────┐
+│<span class="w"> </span><span class="n">Tree</span><span class="w"> </span><span class="n">Update</span><span class="w">  </span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>原子操作更新树结构
+│<span class="w">  </span><span class="o">&amp;</span><span class="w"> </span><span class="n">Rewire</span><span class="w">    </span>│<span class="w">    </span>锁<span class="n">free数据结构</span>
+└──────────────┘
+</code></pre></div>
+
+<h3 id="1414">14.1.4 混合搜索策略</h3>
+<p>结合A<em>的最优性和RRT</em>的探索能力，我们可以设计混合并行搜索：</p>
+<div class="codehilite"><pre><span></span><code>Hybrid Parallel Search:
+
+GPU Kernel 1: A* Front Expansion
+
+  <span class="k">-</span> 处理结构化道路网络
+  <span class="k">-</span> 适合短距离精确规划
+
+GPU Kernel 2: RRT* Exploration  
+
+  <span class="k">-</span> 处理非结构化空间
+  <span class="k">-</span> 适合复杂避障场景
+
+GPU Kernel 3: Path Fusion
+
+  <span class="k">-</span> 合并两种方法的结果
+  <span class="k">-</span> 选择最优路径段
+</code></pre></div>
+
+<p>性能优化要点：</p>
+<ol>
+<li><strong>内存访问模式</strong>：确保coalesced access，使用SOA布局</li>
+<li><strong>分支优化</strong>：使用掩码操作替代条件分支</li>
+<li><strong>共享内存使用</strong>：缓存频繁访问的地图数据</li>
+<li><strong>纹理内存</strong>：存储环境地图，利用硬件插值</li>
+</ol>
+<h2 id="142">14.2 批量轨迹采样与评估</h2>
+<h3 id="1421">14.2.1 轨迹参数化与批量生成</h3>
+<p>自动驾驶中常用的轨迹参数化方法包括多项式曲线、贝塞尔曲线和样条曲线。GPU并行生成的核心是将参数空间离散化：</p>
+<div class="codehilite"><pre><span></span><code><span class="err">轨迹批量生成架构：</span>
+
+<span class="err">参数空间采样：</span>
+<span class="err">┌─────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Lateral</span><span class="w"> </span><span class="n">offset</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="p">...,</span><span class="w"> </span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="n">m</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Longitudinal</span><span class="w"> </span><span class="n">vel</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="p">...,</span><span class="w"> </span><span class="mi">30</span><span class="p">]</span><span class="w"> </span><span class="n">m</span><span class="o">/</span><span class="n">s</span><span class="w"> </span><span class="err">│</span><span class="w">  </span>
+<span class="err">│</span><span class="w">  </span><span class="n">Time</span><span class="w"> </span><span class="n">horizon</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="p">...,</span><span class="w"> </span><span class="mi">5</span><span class="p">]</span><span class="w"> </span><span class="n">s</span><span class="w">         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────┘</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="w">           </span><span class="err">▼</span>
+<span class="w">    </span><span class="n">Grid</span><span class="w"> </span><span class="n">Dimension</span><span class="w"> </span><span class="p">(</span><span class="mi">7</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">210</span><span class="w"> </span><span class="n">trajectories</span><span class="p">)</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────▼──────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">GPU</span><span class="w"> </span><span class="n">Kernels</span><span class="w"> </span><span class="err">│</span>
+<span class="w">    </span><span class="err">├─────────────┤</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Block</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">Trajectory</span><span class="w"> </span><span class="mi">0</span><span class="o">-</span><span class="mi">31</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Block</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">Trajectory</span><span class="w"> </span><span class="mi">32</span><span class="o">-</span><span class="mi">63</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="p">...</span><span class="w">      </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└─────────────┘</span>
+</code></pre></div>
+
+<p>五次多项式轨迹生成的并行实现要点：</p>
+<ol>
+<li><strong>系数预计算</strong>：将边界条件转换为多项式系数的过程完全并行</li>
+<li><strong>时间离散化</strong>：每个轨迹的采样点独立计算</li>
+<li><strong>向量化计算</strong>：使用float4类型一次计算x,y,θ,κ</li>
+</ol>
+<h3 id="1422">14.2.2 并行代价函数评估</h3>
+<p>轨迹评估涉及多个代价项的计算，天然适合并行化：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">代价函数组成</span><span class="err">：</span>
+<span class="n">J_total</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w1</span><span class="o">*</span><span class="n">J_safety</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">w2</span><span class="o">*</span><span class="n">J_comfort</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">w3</span><span class="o">*</span><span class="n">J_efficiency</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">w4</span><span class="o">*</span><span class="n">J_feasibility</span>
+
+<span class="n">并行评估策略</span><span class="err">：</span>
+<span class="err">┌────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">         </span><span class="n">Trajectory</span><span class="w"> </span><span class="n">Buffer</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">[</span><span class="n">T0</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">T1</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">T2</span><span class="o">]</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">[</span><span class="n">Tn</span><span class="o">]</span><span class="w">          </span><span class="err">│</span>
+<span class="err">└────────────┬───────────────────────┘</span>
+<span class="w">             </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌────────▼────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Cost</span><span class="w"> </span><span class="n">Kernels</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">├─────────────────┤</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Safety</span><span class="w"> </span><span class="k">Check</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">碰撞检测</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Comfort</span><span class="w"> </span><span class="n">Eval</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">加速度</span><span class="o">/</span><span class="n">曲率</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Efficiency</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">路程</span><span class="o">/</span><span class="n">时间</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Feasibility</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">动力学约束</span>
+<span class="w">    </span><span class="err">└────────┬────────┘</span>
+<span class="w">             </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌────────▼────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Reduction</span><span class="w"> </span><span class="n">Kernel</span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">归约求和</span>
+<span class="w">    </span><span class="err">└─────────────────┘</span>
+</code></pre></div>
+
+<p>关键优化技术：</p>
+<ol>
+<li><strong>地图查询优化</strong>：使用3D纹理存储占用栅格图，硬件加速双线性插值</li>
+<li><strong>批量碰撞检测</strong>：将轨迹点打包为float4，使用向量化指令</li>
+<li><strong>动态规划评估</strong>：对时序相关的代价项使用扫描算法</li>
+</ol>
+<h3 id="1423">14.2.3 并行轨迹筛选与排序</h3>
+<p>从数百条候选轨迹中选择最优解需要高效的并行排序：</p>
+<div class="codehilite"><pre><span></span><code>多级筛选策略：
+
+Stage 1: Coarse Filter (Block Level)
+
+  <span class="k">-</span> 每个block处理32条轨迹
+  <span class="k">-</span> 快速剔除明显不可行轨迹
+  <span class="k">-</span> 使用共享内存局部排序
+
+Stage 2: Fine Selection (Grid Level)  
+
+  <span class="k">-</span> 收集各block的top-k轨迹
+  <span class="k">-</span> 全局排序选出最优解
+  <span class="k">-</span> 使用bitonic sort或radix sort
+
+优化技巧：
+
+<span class="k">-</span> Early termination: 检测到碰撞立即标记
+<span class="k">-</span> Warp voting: 使用__ballot_sync快速统计
+<span class="k">-</span> Shared memory: 缓存频繁访问的数据
+</code></pre></div>
+
+<h3 id="1424">14.2.4 时空一致性优化</h3>
+<p>利用帧间的时间相关性加速评估：</p>
+<ol>
+<li><strong>轨迹重用</strong>：上一帧的最优轨迹作为warm start</li>
+<li><strong>增量更新</strong>：只重新评估变化的部分</li>
+<li><strong>预测缓存</strong>：基于车辆运动模型预测下一帧的候选集</li>
+</ol>
+<h2 id="143">14.3 动态规划的并行实现</h2>
+<h3 id="1431">14.3.1 并行贝尔曼更新</h3>
+<p>动态规划的核心是贝尔曼方程的迭代求解。GPU并行化的关键是识别独立的子问题：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">串行DP的递推</span><span class="err">：</span>
+<span class="k">for</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">time_steps</span><span class="p">:</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">states</span><span class="p">:</span>
+<span class="w">        </span><span class="n">V</span><span class="o">[</span><span class="n">t</span><span class="o">][</span><span class="n">s</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">min</span><span class="p">(</span><span class="n">cost</span><span class="o">[</span><span class="n">s</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">V</span><span class="o">[</span><span class="n">t-1</span><span class="o">][</span><span class="n">s&#39;</span><span class="o">]</span><span class="p">)</span>
+
+<span class="n">并行DP的分解</span><span class="err">：</span>
+<span class="err">┌─────────────────────────────┐</span>
+<span class="err">│</span><span class="w">    </span><span class="nc">Time</span><span class="w"> </span><span class="n">Step</span><span class="w"> </span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">(</span><span class="n">已知</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="o">[</span><span class="n">V0</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">V1</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">V2</span><span class="o">]</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">[</span><span class="n">Vn</span><span class="o">]</span><span class="w">     </span><span class="err">│</span>
+<span class="err">└──────────┬──────────────────┘</span>
+<span class="w">           </span><span class="err">│</span><span class="w"> </span><span class="n">并行转移</span>
+<span class="w">    </span><span class="err">┌──────▼──────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">GPU</span><span class="w"> </span><span class="n">Grid</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">┌─┬─┬─┬─┐</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="n">B</span><span class="err">│</span><span class="n">B</span><span class="err">│</span><span class="n">B</span><span class="err">│</span><span class="n">B</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">每个Block处理一组状态</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">└─┴─┴─┴─┘</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────┬──────┘</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="err">┌──────────▼──────────────────┐</span>
+<span class="err">│</span><span class="w">    </span><span class="nc">Time</span><span class="w"> </span><span class="n">Step</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="p">(</span><span class="n">计算中</span><span class="p">)</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="o">[</span><span class="n">V0&#39;</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">V1&#39;</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">V2&#39;</span><span class="o">]</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">[</span><span class="n">Vn&#39;</span><span class="o">]</span><span class="w"> </span><span class="err">│</span>
+<span class="err">└─────────────────────────────┘</span>
+</code></pre></div>
+
+<p>并行化策略：</p>
+<ol>
+<li><strong>状态并行</strong>：同一时刻的所有状态并行更新</li>
+<li><strong>路径并行</strong>：多条可能路径同时评估</li>
+<li><strong>分块递推</strong>：将长序列分段，段内并行</li>
+</ol>
+<h3 id="1432">14.3.2 并行维特比算法</h3>
+<p>用于最优路径回溯的维特比算法并行化：</p>
+<div class="codehilite"><pre><span></span><code>前向传播（并行）：
+
+- 每个时间步的所有状态并行计算
+- 使用共享内存存储转移概率矩阵
+- 原子操作更新最优前驱
+
+后向回溯（串行优化）：
+
+- 从终点开始单线程回溯
+- 或使用并行前缀和技术加速
+</code></pre></div>
+
+<h3 id="1433">14.3.3 分层动态规划</h3>
+<p>对于大规模状态空间，采用分层策略：</p>
+<div class="codehilite"><pre><span></span><code>Hierarchical DP:
+
+Level 0 (Coarse): 
+  States: 100 × 100 grid
+  Threads: 10,000 parallel updates
+
+Level 1 (Medium):
+  States: 20 × 20 local refinement  
+  Threads: 400 parallel updates
+
+Level 2 (Fine):
+  States: Continuous optimization
+  Threads: Gradient-based solver
+</code></pre></div>
+
+<p>内存管理优化：</p>
+<ol>
+<li><strong>滚动数组</strong>：只保留相邻两个时间步的状态</li>
+<li><strong>状态压缩</strong>：使用位运算压缩离散状态</li>
+<li><strong>稀疏表示</strong>：只存储和更新可达状态</li>
+</ol>
+<h2 id="144">14.4 二次规划求解器</h2>
+<h3 id="1441">14.4.1 并行二次规划问题形式</h3>
+<p>轨迹优化常归结为二次规划（QP）问题：</p>
+<div class="codehilite"><pre><span></span><code>标准QP形式：
+min  0.5 <span class="gs">* x^T *</span> H <span class="gs">* x + f^T *</span> x
+s.t. A <span class="gs">* x &lt;= b</span>
+<span class="gs">     Aeq *</span> x = beq
+     lb &lt;= x &lt;= ub
+
+其中x为轨迹参数向量，维度可达数百到数千
+</code></pre></div>
+
+<p>GPU并行求解的关键在于矩阵运算的加速：</p>
+<div class="codehilite"><pre><span></span><code>并行矩阵运算分解：
+
+H * x 计算：
+┌──────────────┐
+│   H Matrix   │  
+│ ┌──┬──┬──┐  │
+│ │  │  │  │  │  每个线程块处理H的一个子块
+│ ├──┼──┼──┤  │  使用共享内存缓存
+│ │  │  │  │  │  
+│ └──┴──┴──┘  │
+└──────────────┘
+
+梯度计算：∇f = H*x + f
+
+<span class="k">-</span> 使用cuBLAS加速矩阵向量乘法
+<span class="k">-</span> 融合kernel减少内存访问
+</code></pre></div>
+
+<h3 id="1442-gpu">14.4.2 内点法的GPU实现</h3>
+<p>内点法是求解大规模QP的主流方法：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">内点法迭代步骤</span><span class="err">：</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">KKT系统构建</span><span class="err">（</span><span class="n">并行</span><span class="err">）</span>
+<span class="w">   </span><span class="o">[</span><span class="n">H    A^T</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">dx</span><span class="o">]</span><span class="w">   </span><span class="o">[</span><span class="n">r1</span><span class="o">]</span>
+<span class="w">   </span><span class="o">[</span><span class="n">A    -D </span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">dλ</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span><span class="n">r2</span><span class="o">]</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">线性系统求解</span><span class="err">（</span><span class="n">并行</span><span class="err">）</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="nl">Cholesky分解</span><span class="p">:</span><span class="w"> </span><span class="n">cuSOLVER</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="nl">PCG迭代</span><span class="p">:</span><span class="w"> </span><span class="n">自定义kernel</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">步长搜索</span><span class="err">（</span><span class="n">并行</span><span class="err">）</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">多个候选步长同时评估</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">使用warp投票选择最优</span>
+
+<span class="mf">4.</span><span class="w"> </span><span class="n">变量更新</span><span class="err">（</span><span class="n">并行</span><span class="err">）</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">α</span><span class="o">*</span><span class="n">dx</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">向量运算完全并行</span>
+</code></pre></div>
+
+<p>优化技巧：</p>
+<ol>
+<li><strong>预条件子</strong>：利用问题结构设计高效预条件子</li>
+<li><strong>暖启动</strong>：使用上一帧的解作为初始值</li>
+<li><strong>早停策略</strong>：满足实时性要求时提前终止</li>
+</ol>
+<h3 id="1443-admm">14.4.3 ADMM并行求解器</h3>
+<p>交替方向乘子法（ADMM）天然适合并行化：</p>
+<div class="codehilite"><pre><span></span><code>ADMM分解策略：
+
+原问题分解为子问题：
+Problem 1: min f1(x) （动力学约束）
+Problem 2: min f2(z) （避障约束）
+Coupling:  x = z
+
+ADMM迭代：
+┌────────────┐     ┌────────────┐
+│  x-update  │────▶│  z-update  │
+│  (Kernel1) │     │  (Kernel2) │
+└────────────┘     └────────────┘
+       ▲                 │
+       └─────────────────┘
+          λ-update (Kernel3)
+
+每个子问题可以独立并行求解
+</code></pre></div>
+
+<h3 id="1444-qp">14.4.4 增量式QP求解</h3>
+<p>利用问题的时序结构加速：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">MPC中的QP序列</span><span class="err">：</span>
+
+<span class="n">Time</span><span class="w"> </span><span class="n">t</span><span class="o">:</span><span class="w">   </span><span class="n">QP_t</span><span class="w">   </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">Solution</span><span class="w"> </span><span class="n">x_t</span>
+<span class="n">Time</span><span class="w"> </span><span class="n">t</span><span class="o">+</span><span class="mi">1</span><span class="o">:</span><span class="w"> </span><span class="n">QP_t</span><span class="o">+</span><span class="mi">1</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">Solution</span><span class="w"> </span><span class="n">x_t</span><span class="o">+</span><span class="mi">1</span>
+
+<span class="err">增量更新策略：</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="err">识别变化的约束（新障碍物）</span>
+<span class="mf">2.</span><span class="w"> </span><span class="err">只更新受影响的</span><span class="n">KKT块</span>
+<span class="mf">3.</span><span class="w"> </span><span class="err">使用</span><span class="n">Sherman</span><span class="o">-</span><span class="n">Morrison公式更新逆矩阵</span>
+
+<span class="err">性能提升：</span>
+
+<span class="o">-</span><span class="w"> </span><span class="err">完整求解</span><span class="o">:</span><span class="w"> </span><span class="mi">100</span><span class="n">ms</span>
+<span class="o">-</span><span class="w"> </span><span class="err">增量更新</span><span class="o">:</span><span class="w"> </span><span class="mi">10</span><span class="n">ms</span>
+</code></pre></div>
+
+<h2 id="145">14.5 实时避障与轨迹平滑</h2>
+<h3 id="1451">14.5.1 动态障碍物的并行处理</h3>
+<p>实时避障需要快速处理多个移动障碍物的轨迹预测和碰撞检测：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">动态障碍物处理流水线</span><span class="err">：</span>
+
+<span class="n">输入</span><span class="err">：</span><span class="n">N个障碍物的当前状态</span>
+<span class="err">┌─────────────────────────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Obstacle</span><span class="w"> </span><span class="n">States</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="nc">time</span><span class="w"> </span><span class="n">t</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="o">[</span><span class="n">Obs1</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">Obs2</span><span class="o">]</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">[</span><span class="n">ObsN</span><span class="o">]</span><span class="w">   </span><span class="err">│</span>
+<span class="err">└──────────┬──────────────────┘</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────▼──────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Prediction</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">并行轨迹预测</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="n">Kernels</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="n">每个障碍物独立</span>
+<span class="w">    </span><span class="err">└──────┬──────┘</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="err">┌──────────▼──────────────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Predicted</span><span class="w"> </span><span class="n">Trajectories</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">T</span><span class="o">=</span><span class="mi">0</span><span class="w">  </span><span class="n">T</span><span class="o">=</span><span class="mi">1</span><span class="w">  </span><span class="n">T</span><span class="o">=</span><span class="mi">2</span><span class="w">  </span><span class="p">...</span><span class="w">  </span><span class="n">T</span><span class="o">=</span><span class="n">K</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">K个时间步</span>
+<span class="err">└──────────┬──────────────────┘</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────▼──────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Collision</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">批量碰撞检测</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="n">Testing</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="n">使用空间哈希</span>
+<span class="w">    </span><span class="err">└──────┬──────┘</span>
+<span class="w">           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────▼──────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Risk</span><span class="w"> </span><span class="n">Field</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">生成风险场</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Generation</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="mi">3</span><span class="n">D纹理存储</span>
+<span class="w">    </span><span class="err">└─────────────┘</span>
+</code></pre></div>
+
+<p>关键技术：</p>
+<ol>
+<li>
+<p><strong>轨迹预测并行化</strong>：
+   - 每个障碍物使用独立线程预测
+   - 多种运动模型（CV/CA/CTRV）并行评估
+   - 使用贝叶斯滤波融合多模型预测</p>
+</li>
+<li>
+<p><strong>时空占用网格</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="mf">4</span><span class="n">D</span><span class="w"> </span><span class="n">Grid</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">):</span>
+
+<span class="o">-</span><span class="w"> </span><span class="n">空间分辨率</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="n">m</span>
+<span class="o">-</span><span class="w"> </span><span class="n">时间分辨率</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="n">s</span>
+<span class="o">-</span><span class="w"> </span><span class="n">使用位掩码压缩存储</span>
+<span class="o">-</span><span class="w"> </span><span class="n">原子操作更新占用状态</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>概率碰撞评估</strong>：
+   - 蒙特卡洛采样并行化
+   - 使用cuRAND生成轨迹扰动
+   - 批量评估碰撞概率</li>
+</ol>
+<h3 id="1452">14.5.2 反应式避障层</h3>
+<p>在规划轨迹基础上添加快速反应层：</p>
+<div class="codehilite"><pre><span></span><code>反应式避障架构：
+
+┌────────────────────┐
+│<span class="w">  </span><span class="n">Planned</span><span class="w"> </span><span class="n">Path</span><span class="w">      </span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>全局规划轨迹
+└─────────┬──────────┘
+<span class="w">          </span>│
+┌─────────▼──────────┐
+│<span class="w">  </span><span class="n">Local</span><span class="w"> </span><span class="n">Sensors</span><span class="w">     </span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>激光雷达<span class="o">/</span>相机
+└─────────┬──────────┘
+<span class="w">          </span>│
+<span class="w">    </span>┌─────▼─────┐
+<span class="w">    </span>│<span class="w"> </span><span class="n">Fast</span><span class="w"> </span><span class="n">DWA</span><span class="w">  </span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">Dynamic</span><span class="w"> </span><span class="n">Window</span><span class="w"> </span><span class="n">Approach</span>
+<span class="w">    </span>│<span class="w">  </span><span class="p">(</span><span class="n">GPU</span><span class="p">)</span><span class="w">    </span>│<span class="w">    </span>并行速度采样
+<span class="w">    </span>└─────┬─────┘
+<span class="w">          </span>│
+┌─────────▼──────────┐
+│<span class="w"> </span><span class="n">Modified</span><span class="w"> </span><span class="n">Trajectory</span>│<span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span>局部调整后轨迹
+└────────────────────┘
+
+并行<span class="n">DWA实现</span>：
+
+<span class="o">-</span><span class="w"> </span>速度空间离散<span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="w"> </span>ω<span class="p">)</span><span class="w"> </span>∈<span class="w"> </span><span class="p">[</span><span class="n">v_min</span><span class="p">,</span><span class="w"> </span><span class="n">v_max</span><span class="p">]</span><span class="w"> </span>×<span class="w"> </span><span class="p">[</span>ω_<span class="n">min</span><span class="p">,</span><span class="w"> </span>ω_<span class="n">max</span><span class="p">]</span>
+<span class="o">-</span><span class="w"> </span>并行前向模拟<span class="o">:</span><span class="w"> </span>每个速度组合独立仿真
+<span class="o">-</span><span class="w"> </span>批量评估<span class="o">:</span><span class="w"> </span>距离、速度、方向代价并行计算
+</code></pre></div>
+
+<p>优化策略：</p>
+<ol>
+<li><strong>分层采样</strong>：粗细结合的速度空间采样</li>
+<li><strong>早期剔除</strong>：快速排除明显碰撞的速度</li>
+<li><strong>GPU常量内存</strong>：存储车辆动力学参数</li>
+</ol>
+<h3 id="1453">14.5.3 轨迹平滑算法</h3>
+<p>生成的轨迹需要平滑处理以保证舒适性：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">并行B样条平滑</span><span class="err">：</span>
+
+<span class="n">控制点优化问题</span><span class="err">：</span>
+<span class="nf">min</span><span class="w"> </span><span class="o">||</span><span class="n">B</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">P_original</span><span class="o">||</span><span class="n">²</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">λ</span><span class="o">*||</span><span class="n">B</span><span class="s1">&#39;&#39;</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">||</span><span class="n">²</span>
+
+<span class="n">其中B</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="n">为B样条曲线</span><span class="err">，</span><span class="n">P为原始轨迹点</span>
+
+<span class="n">并行优化策略</span><span class="err">：</span>
+<span class="err">┌────────────────────────┐</span>
+<span class="err">│</span><span class="w">   </span><span class="n">Control</span><span class="w"> </span><span class="n">Points</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">[</span><span class="n">C0</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">C1</span><span class="o">]</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">[</span><span class="n">Cn</span><span class="o">]</span><span class="w">   </span><span class="err">│</span>
+<span class="err">└───────────┬────────────┘</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="w">     </span><span class="err">┌──────▼──────┐</span>
+<span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">Gradient</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">并行梯度计算</span>
+<span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">Computation</span><span class="w"> </span><span class="err">│</span><span class="w">    </span><span class="n">每个控制点独立</span>
+<span class="w">     </span><span class="err">└──────┬──────┘</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="w">     </span><span class="err">┌──────▼──────┐</span>
+<span class="w">     </span><span class="err">│</span><span class="w">   </span><span class="n">L</span><span class="o">-</span><span class="n">BFGS</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">并行线搜索</span>
+<span class="w">     </span><span class="err">│</span><span class="w">   </span><span class="k">Update</span><span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="n">多步长同时评估</span>
+<span class="w">     </span><span class="err">└──────┬──────┘</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="err">┌───────────▼────────────┐</span>
+<span class="err">│</span><span class="w">   </span><span class="n">Smoothed</span><span class="w"> </span><span class="n">Trajectory</span><span class="w">  </span><span class="err">│</span>
+<span class="err">└────────────────────────┘</span>
+</code></pre></div>
+
+<p>关键实现细节：</p>
+<ol>
+<li><strong>基函数预计算</strong>：B样条基函数值预存于纹理内存</li>
+<li><strong>稀疏矩阵运算</strong>：利用B样条的局部支撑性</li>
+<li><strong>约束投影</strong>：并行投影到可行域</li>
+</ol>
+<h3 id="1454">14.5.4 曲率连续性保证</h3>
+<p>确保轨迹的几何连续性对车辆控制至关重要：</p>
+<div class="codehilite"><pre><span></span><code>曲率约束并行检查：
+
+对每个轨迹点并行计算：
+
+<span class="k">-</span> 曲率: κ = |x&#39;y&#39;&#39; - y&#39;x&#39;&#39;| / (x&#39;² + y&#39;²)^(3/2)
+<span class="k">-</span> 曲率变化率: dκ/ds
+
+约束条件：
+
+<span class="k">-</span> |κ| ≤ κ_max （最大转向）
+<span class="k">-</span> |dκ/ds| ≤ dκ_max （转向平滑性）
+
+并行修正策略：
+
+1. 识别违反约束的点（并行扫描）
+2. 局部调整控制点（并行优化）
+3. 全局传播修正（迭代收敛）
+</code></pre></div>
+
+<h3 id="1455">14.5.5 多层级融合策略</h3>
+<p>将不同时间尺度的规划结果融合：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">时间层级</span><span class="err">：</span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">0</span><span class="err">:</span><span class="w"> </span><span class="n">全局路径</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="n">Hz更新</span><span class="p">)</span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">1</span><span class="err">:</span><span class="w"> </span><span class="n">局部轨迹</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="n">Hz更新</span><span class="p">)</span><span class="w">  </span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">2</span><span class="err">:</span><span class="w"> </span><span class="n">反应控制</span><span class="w"> </span><span class="p">(</span><span class="mf">0.3</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="n">Hz更新</span><span class="p">)</span>
+
+<span class="n">GPU融合kernel</span><span class="err">：</span>
+<span class="n">__global__</span><span class="w"> </span><span class="n">void</span><span class="w"> </span><span class="n">trajectoryFusion</span><span class="p">(</span>
+<span class="w">    </span><span class="n">float4</span><span class="o">*</span><span class="w"> </span><span class="n">globalPath</span><span class="p">,</span><span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">全局路径</span>
+<span class="w">    </span><span class="n">float4</span><span class="o">*</span><span class="w"> </span><span class="n">localTraj</span><span class="p">,</span><span class="w">     </span><span class="o">//</span><span class="w"> </span><span class="n">局部轨迹</span>
+<span class="w">    </span><span class="n">float4</span><span class="o">*</span><span class="w"> </span><span class="n">reactiveCmd</span><span class="p">,</span><span class="w">   </span><span class="o">//</span><span class="w"> </span><span class="n">反应指令</span>
+<span class="w">    </span><span class="n">float4</span><span class="o">*</span><span class="w"> </span><span class="n">fusedOutput</span><span class="p">,</span><span class="w">   </span><span class="o">//</span><span class="w"> </span><span class="n">融合输出</span>
+<span class="w">    </span><span class="nc">float</span><span class="o">*</span><span class="w"> </span><span class="n">weights</span><span class="p">,</span><span class="w">        </span><span class="o">//</span><span class="w"> </span><span class="n">融合权重</span>
+<span class="w">    </span><span class="nc">int</span><span class="w"> </span><span class="n">horizonLength</span>
+<span class="p">)</span><span class="w"> </span><span class="err">{</span>
+<span class="w">    </span><span class="nc">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">horizonLength</span><span class="p">)</span><span class="w"> </span><span class="err">{</span>
+<span class="w">        </span><span class="o">//</span><span class="w"> </span><span class="n">时间衰减权重</span>
+<span class="w">        </span><span class="nc">float</span><span class="w"> </span><span class="n">w_global</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">weights</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nf">exp</span><span class="p">(</span><span class="o">-</span><span class="n">idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.1</span><span class="n">f</span><span class="p">);</span>
+<span class="w">        </span><span class="nc">float</span><span class="w"> </span><span class="n">w_local</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">weights</span><span class="o">[</span><span class="n">1</span><span class="o">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nf">exp</span><span class="p">(</span><span class="o">-</span><span class="n">idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.1</span><span class="n">f</span><span class="p">));</span>
+<span class="w">        </span><span class="nc">float</span><span class="w"> </span><span class="n">w_reactive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">weights</span><span class="o">[</span><span class="n">2</span><span class="o">]</span><span class="p">;</span>
+
+<span class="w">        </span><span class="o">//</span><span class="w"> </span><span class="n">加权融合</span>
+<span class="w">        </span><span class="n">fusedOutput</span><span class="o">[</span><span class="n">idx</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w_global</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">globalPath</span><span class="o">[</span><span class="n">idx</span><span class="o">]</span><span class="w"> </span><span class="o">+</span>
+<span class="w">                          </span><span class="n">w_local</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">localTraj</span><span class="o">[</span><span class="n">idx</span><span class="o">]</span><span class="w"> </span><span class="o">+</span>
+<span class="w">                          </span><span class="n">w_reactive</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">reactiveCmd</span><span class="o">[</span><span class="n">idx</span><span class="o">]</span><span class="p">;</span>
+
+<span class="w">        </span><span class="o">//</span><span class="w"> </span><span class="n">约束投影</span>
+<span class="w">        </span><span class="n">projectToFeasible</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fusedOutput</span><span class="o">[</span><span class="n">idx</span><span class="o">]</span><span class="p">);</span>
+<span class="w">    </span><span class="err">}</span>
+<span class="err">}</span>
+</code></pre></div>
+
+<h2 id="146">14.6 本章小结</h2>
+<p>本章深入探讨了路径规划与轨迹优化的GPU并行化技术。主要内容包括：</p>
+<p><strong>核心算法并行化</strong>：</p>
+<ul>
+<li>A<em>和RRT</em>的并行搜索策略，通过批量节点扩展实现10-50倍加速</li>
+<li>动态规划的状态并行和时间并行分解，将O(n²)复杂度降至O(n)</li>
+<li>二次规划求解器的矩阵运算加速，实现毫秒级MPC求解</li>
+</ul>
+<p><strong>关键技术要点</strong>：</p>
+<ol>
+<li><strong>数据结构设计</strong>：并行优先队列、空间哈希、位掩码压缩</li>
+<li><strong>内存优化</strong>：纹理内存存储地图、共享内存缓存热点数据</li>
+<li><strong>负载均衡</strong>：工作窃取、动态任务分配、分层处理</li>
+<li><strong>数值稳定性</strong>：原子操作保证一致性、增量更新减少误差累积</li>
+</ol>
+<p><strong>性能优化公式</strong>：</p>
+<ul>
+<li>并行效率: η = S/(p×E) ≈ 0.7-0.9 （S=加速比, p=处理器数, E=串行部分比例）</li>
+<li>内存带宽利用率: B_eff = (有效数据传输量)/(理论带宽×时间) &gt; 80%</li>
+<li>实时性保证: T_plan + T_smooth + T_check &lt; 10ms</li>
+</ul>
+<p><strong>实际应用效果</strong>：</p>
+<ul>
+<li>路径搜索：从100ms降至5ms</li>
+<li>轨迹评估：批量1000条轨迹仅需2ms</li>
+<li>避障响应：从30ms降至3ms</li>
+<li>整体规划频率：从10Hz提升至100Hz</li>
+</ul>
+<h2 id="147">14.7 练习题</h2>
+<h3 id="_1">基础题</h3>
+<p><strong>练习14.1</strong>：并行A*的前沿管理<br />
+设计一个GPU上的并行优先队列，支持批量插入和批量提取最小的K个元素。要求支持至少10000个节点，每次批量操作K=32。</p>
+<details>
+<summary>提示</summary>
+<p>考虑使用分段堆结构，每个段可以独立维护。使用原子操作协调段间的合并。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>使用两级堆结构：第一级是大小为32的局部堆（每个block一个），第二级是全局堆。局部堆在共享内存中维护，定期与全局堆同步。批量提取时，先从全局堆取出2K个元素分发给各局部堆，再并行提取。</p>
+</details>
+<p><strong>练习14.2</strong>：轨迹批量评估优化<br />
+给定1000条候选轨迹，每条包含100个点，设计GPU kernel计算每条轨迹的代价。代价包括：距离代价、平滑度代价和障碍物代价。</p>
+<details>
+<summary>提示</summary>
+<p>使用网格维度映射轨迹，块维度处理轨迹内的点。考虑使用共享内存缓存障碍物地图的局部区域。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>Grid(32, 32)配置处理1024条轨迹，Block(128)处理每条轨迹的点。使用reduction计算轨迹内的累积代价。障碍物地图存储在纹理内存中，利用硬件插值。每个block使用48KB共享内存缓存地图tile。</p>
+</details>
+<p><strong>练习14.3</strong>：动态规划的滚动数组实现<br />
+实现一个GPU版本的动态规划求解器，用于解决网格路径规划问题。状态空间为100×100，时间步长为50。</p>
+<details>
+<summary>提示</summary>
+<p>只需要保存相邻两个时间步的状态。使用ping-pong buffer技术交替更新。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>分配两个100×100的状态数组，使用指针交换实现滚动。每个时间步启动100×100个线程并行更新所有状态。使用纹理内存存储转移代价矩阵，减少全局内存访问。</p>
+</details>
+<p><strong>练习14.4</strong>：实时碰撞检测网格<br />
+设计一个空间哈希数据结构，支持动态障碍物的快速插入和查询。要求支持至少1000个动态障碍物的实时更新。</p>
+<details>
+<summary>提示</summary>
+<p>使用3D网格哈希，每个cell维护障碍物ID列表。考虑使用原子操作处理并发插入。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>使用morton编码将3D坐标映射到1D哈希键。每个cell预分配固定大小的障碍物列表（如16个）。使用原子计数器管理列表插入。查询时并行检查相邻的27个cells。</p>
+</details>
+<h3 id="_2">挑战题</h3>
+<p><strong>练习14.5</strong>：多分辨率路径规划<br />
+实现一个三层分辨率的路径规划器：粗糙层（1m网格）、中等层（0.2m网格）、精细层（0.05m网格）。设计GPU kernel实现层间的信息传递和路径细化。</p>
+<details>
+<summary>提示</summary>
+<p>从粗糙层开始规划，使用插值生成中等层的初始路径，再逐层细化。考虑使用纹理内存的mipmap功能。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>粗糙层使用标准A*找到初始路径。中等层在粗糙路径的管道内搜索（宽度±5个网格）。精细层只在中等路径的±2个网格内优化。使用3D纹理存储多分辨率地图，hardware mipmap加速层间查询。每层使用不同的block配置：粗(8,8)、中(16,16)、细(32,32)。</p>
+</details>
+<p><strong>练习14.6</strong>：ADMM求解器的并行化<br />
+实现一个GPU版本的ADMM求解器，用于求解包含1000个变量和500个约束的QP问题。要求达到1ms的求解时间。</p>
+<details>
+<summary>提示</summary>
+<p>将问题分解为多个子问题，每个可以独立求解。使用cuBLAS加速矩阵运算，自定义kernel处理投影操作。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>将原问题分解为10个100维的子问题，每个block处理一个子问题。x更新使用cuBLAS的批量Cholesky求解。z更新使用自定义投影kernel，每个线程处理一个约束。λ更新完全并行。使用统一内存简化CPU-GPU数据交换。预计算并缓存不变的矩阵分解结果。</p>
+</details>
+<p><strong>练习14.7</strong>：轨迹时空优化<br />
+设计一个同时优化空间路径和速度剖面的GPU求解器。输入是参考路径，输出是满足动力学约束的最优轨迹。</p>
+<details>
+<summary>提示</summary>
+<p>使用S-T图方法解耦空间和时间优化。先优化路径，再优化速度剖面，迭代收敛。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>第一阶段：固定时间，优化空间路径（QP问题）。第二阶段：固定路径，优化速度剖面（DP问题）。使用两个独立的kernel流并行执行。路径优化使用批量B样条控制点优化。速度优化使用并行DP，考虑加速度、加加速度约束。迭代3-5次达到收敛。使用graph capture减少kernel启动开销。</p>
+</details>
+<p><strong>练习14.8</strong>：多机器人协同规划<br />
+实现一个支持10个机器人的协同路径规划系统。要求避免机器人间的碰撞，同时最小化总体完成时间。</p>
+<details>
+<summary>提示</summary>
+<p>使用优先级规划或耦合规划方法。考虑时空预留表避免冲突。</p>
+</details>
+<details>
+<summary>答案</summary>
+<p>使用CBS（Conflict-Based Search）算法的GPU并行版本。高层搜索冲突，低层并行规划各机器人路径。维护4D时空占用表(x,y,z,t)，使用原子操作更新预留状态。每个机器人的路径规划使用独立的CUDA流。冲突检测使用批量射线检测。使用优先级队列管理约束树的扩展。预计算启发式距离表加速搜索。</p>
+</details>
+<h2 id="148">14.8 常见陷阱与错误</h2>
+<h3 id="_3">内存访问陷阱</h3>
+<ol>
+<li><strong>非合并访问</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>错误：每个线程访问轨迹的不同属性
+thread0: traj[0].x, traj[0].y, traj[0].theta
+thread1: traj[1].x, traj[1].y, traj[1].theta
+
+正确：SOA布局
+thread0: x[0], y[0], theta[0]
+thread1: x[1], y[1], theta[1]
+</code></pre></div>
+
+<ol start="2">
+<li><strong>Bank Conflict</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>错误：32个线程访问同一bank
+__shared__ float cost[32];
+cost[threadIdx.x] = ...; // 所有访问映射到同一bank
+
+正确：添加padding
+__shared__ float cost[33];
+</code></pre></div>
+
+<h3 id="_4">数值稳定性问题</h3>
+<ol start="3">
+<li><strong>浮点累积误差</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>错误：长轨迹的累积积分
+for(int i = 0; i &lt; 1000; i++) {
+    x += dx * dt; // 误差累积
+}
+
+正确：使用Kahan求和或双精度
+</code></pre></div>
+
+<ol start="4">
+<li><strong>矩阵条件数</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>QP求解中的数值问题：
+
+<span class="k">-</span> 添加正则化项：H = H + ε*I
+<span class="k">-</span> 预条件处理：使用Jacobi或不完全Cholesky
+<span class="k">-</span> 缩放变量：归一化到[-1, 1]区间
+</code></pre></div>
+
+<h3 id="_5">并发错误</h3>
+<ol start="5">
+<li><strong>竞态条件</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">错误</span><span class="err">：</span><span class="n">多线程更新同一节点</span>
+<span class="k">if</span><span class="p">(</span><span class="n">newCost</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">nodeCost</span><span class="o">[</span><span class="n">id</span><span class="o">]</span><span class="p">)</span><span class="w"> </span><span class="err">{</span>
+<span class="w">    </span><span class="n">nodeCost</span><span class="o">[</span><span class="n">id</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newCost</span><span class="p">;</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="n">竞态</span><span class="err">！</span>
+<span class="err">}</span>
+
+<span class="n">正确</span><span class="err">：</span><span class="n">使用原子操作</span>
+<span class="n">atomicMin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">nodeCost</span><span class="o">[</span><span class="n">id</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">newCost</span><span class="p">);</span>
+</code></pre></div>
+
+<ol start="6">
+<li><strong>死锁</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>避免嵌套锁，使用lock-free数据结构
+优先使用原子操作而非互斥锁
+</code></pre></div>
+
+<h3 id="_6">性能陷阱</h3>
+<ol start="7">
+<li><strong>过度同步</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>错误：频繁的__syncthreads()
+正确：批量处理，减少同步点
+</code></pre></div>
+
+<ol start="8">
+<li><strong>分支发散</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>错误：复杂的条件分支
+if(complex_condition) {
+    // 长代码路径
+} else {
+    // 另一个长路径
+}
+
+正确：使用预测和掩码
+float result = mask <span class="gs">* path1_result + </span>
+<span class="gs">              (1-mask) *</span> path2_result;
+</code></pre></div>
+
+<h2 id="149">14.9 最佳实践检查清单</h2>
+<h3 id="_7">算法设计审查</h3>
+<ul>
+<li>[ ] 识别并行化机会：数据并行、任务并行、流水线并行</li>
+<li>[ ] 选择合适的数据结构：避免指针追逐，优先使用数组</li>
+<li>[ ] 设计负载均衡策略：动态任务分配、工作窃取</li>
+<li>[ ] 考虑数值稳定性：正则化、预条件、适当精度</li>
+</ul>
+<h3 id="_8">内存优化审查</h3>
+<ul>
+<li>[ ] 数据布局优化：SOA vs AOS，考虑访问模式</li>
+<li>[ ] 使用适当的内存类型：全局、共享、常量、纹理</li>
+<li>[ ] 确保合并访问：检查内存访问模式</li>
+<li>[ ] 减少内存传输：kernel融合、数据重用</li>
+</ul>
+<h3 id="_9">并发控制审查</h3>
+<ul>
+<li>[ ] 正确使用原子操作：选择合适的原子函数</li>
+<li>[ ] 避免竞态条件：识别共享数据访问</li>
+<li>[ ] 最小化同步开销：批量处理、异步执行</li>
+<li>[ ] 使用CUDA流：并行kernel执行、异步传输</li>
+</ul>
+<h3 id="_10">性能调优审查</h3>
+<ul>
+<li>[ ] Profile分析：使用Nsight Compute识别瓶颈</li>
+<li>[ ] 占用率优化：调整block大小和寄存器使用</li>
+<li>[ ] 指令优化：使用快速数学函数、向量化操作</li>
+<li>[ ] 延迟隐藏：增加并行度、使用异步操作</li>
+</ul>
+<h3 id="_11">鲁棒性审查</h3>
+<ul>
+<li>[ ] 边界条件处理：检查数组越界、空指针</li>
+<li>[ ] 错误处理：CUDA API错误检查、kernel错误传播</li>
+<li>[ ] 输入验证：参数范围检查、维度匹配</li>
+<li>[ ] 测试覆盖：单元测试、集成测试、压力测试</li>
+</ul>
+<h3 id="_12">可维护性审查</h3>
+<ul>
+<li>[ ] 代码组织：模块化设计、清晰的接口</li>
+<li>[ ] 文档完善：算法说明、参数含义、性能指标</li>
+<li>[ ] 版本兼容：GPU架构兼容性、CUDA版本要求</li>
+<li>[ ] 调试支持：日志输出、中间结果验证</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter13.html" class="nav-link prev">← 第13章：实时语义分割与实例分割</a><a href="chapter15.html" class="nav-link next">第15章：视觉SLAM的GPU加速 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

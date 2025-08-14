@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第21章：嵌入式GPU开发（Jetson）</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="21gpujetson">第21章：嵌入式GPU开发（Jetson）</h1>
+<p>自动驾驶和具身智能需要在边缘设备上进行实时推理，NVIDIA Jetson平台提供了功耗优化的GPU计算能力。本章深入探讨Jetson架构特点、功耗管理、内存优化和TensorRT集成，帮助你将高性能AI应用部署到边缘设备。通过实际的自动驾驶感知系统案例，你将掌握从模型优化到系统集成的完整边缘部署流程。</p>
+<h2 id="211-jetson">21.1 Jetson架构特点</h2>
+<p>Jetson平台采用了与桌面级GPU显著不同的架构设计，针对嵌入式场景的功耗、体积和成本约束进行了深度优化。理解这些架构特点是高效开发边缘AI应用的基础。</p>
+<h3 id="2111-jetson">21.1.1 Jetson产品线概览</h3>
+<p>NVIDIA Jetson产品线覆盖了从入门级到高性能的完整谱系，每个型号都针对特定的应用场景优化：</p>
+<div class="codehilite"><pre><span></span><code>产品型号        GPU架构    CUDA核心   内存      功耗    典型应用
+----------------------------------------------------------------
+Jetson Nano    Maxwell    128       4GB      5-10W   入门级AI推理
+Jetson TX2     Pascal     256       8GB      7.5-15W 工业视觉
+Jetson Xavier  Volta      512       16/32GB  10-30W  自动驾驶
+Jetson Orin    Ampere     1024-2048 32/64GB  15-60W  机器人/AV
+</code></pre></div>
+
+<p>关键的架构演进包括：</p>
+<ul>
+<li><strong>Maxwell到Pascal</strong>：引入统一内存，提升内存带宽效率</li>
+<li><strong>Pascal到Volta</strong>：添加Tensor Core，支持混合精度计算</li>
+<li><strong>Volta到Ampere</strong>：优化稀疏计算，提升INT8性能</li>
+<li><strong>Ampere到Ada</strong>：增强光线追踪和AI推理能力</li>
+</ul>
+<p>选型时需要考虑的关键因素：</p>
+<ol>
+<li><strong>算力需求</strong>：TOPS（Tera Operations Per Second）指标</li>
+<li><strong>内存容量</strong>：模型大小和批处理需求</li>
+<li><strong>功耗预算</strong>：电池供电还是外接电源</li>
+<li><strong>接口需求</strong>：摄像头数量、PCIe扩展等</li>
+<li><strong>软件兼容性</strong>：JetPack版本和CUDA计算能力</li>
+</ol>
+<h3 id="2112-uma">21.1.2 统一内存架构（UMA）</h3>
+<p>Jetson采用统一内存架构，CPU和GPU共享同一物理内存，这带来了独特的优化机会：</p>
+<div class="codehilite"><pre><span></span><code>传统桌面GPU架构：              Jetson UMA架构：
+┌─────────┐  ┌─────────┐       ┌─────────────────┐
+│   CPU   │  │   GPU   │       │  CPU + GPU SoC  │
+└────┬────┘  └────┬────┘       └────────┬────────┘
+     │            │                      │
+┌────▼────┐  ┌────▼────┐              ┌─▼─┐
+│ 系统内存 │  │ 显存    │              │统一│
+└─────────┘  └─────────┘              │内存│
+                                       └───┘
+</code></pre></div>
+
+<p>UMA的优势：</p>
+<ul>
+<li><strong>零拷贝访问</strong>：CPU和GPU可以直接访问相同的内存地址</li>
+<li><strong>内存利用率高</strong>：动态分配，避免显存浪费</li>
+<li><strong>简化编程模型</strong>：减少显式内存传输</li>
+</ul>
+<p>UMA的挑战：</p>
+<ul>
+<li><strong>带宽竞争</strong>：CPU和GPU共享内存带宽</li>
+<li><strong>缓存一致性</strong>：需要正确管理缓存刷新</li>
+<li><strong>页面迁移开销</strong>：操作系统可能在CPU/GPU间迁移页面</li>
+</ul>
+<p>编程时的关键API：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 分配统一内存</span>
+<span class="n">cudaMallocManaged</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+
+<span class="c1">// 设置内存访问提示</span>
+<span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemAdviseSetPreferredLocation</span><span class="p">,</span><span class="w"> </span><span class="n">deviceId</span><span class="p">);</span>
+<span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemAdviseSetAccessedBy</span><span class="p">,</span><span class="w"> </span><span class="n">deviceId</span><span class="p">);</span>
+
+<span class="c1">// 预取数据到指定设备</span>
+<span class="n">cudaMemPrefetchAsync</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">deviceId</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="p">);</span>
+
+<span class="c1">// 零拷贝内存（固定内存映射）</span>
+<span class="n">cudaHostAlloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaHostAllocMapped</span><span class="p">);</span>
+<span class="n">cudaHostGetDevicePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">d_ptr</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="2113-gpu">21.1.3 GPU计算能力差异</h3>
+<p>Jetson GPU的计算能力与同代桌面GPU相比有所调整，需要针对性优化：</p>
+<p><strong>SM（流多处理器）数量差异</strong>：</p>
+<div class="codehilite"><pre><span></span><code>桌面级 RTX 3090：  82个SM，10496 CUDA核心
+Jetson AGX Orin：  16个SM，2048 CUDA核心
+缩放比例：         ~1:5
+</code></pre></div>
+
+<p>这意味着：</p>
+<ol>
+<li><strong>Grid配置需要调整</strong>：减少block数量以匹配SM数量</li>
+<li><strong>占用率策略不同</strong>：更容易达到100%占用率，但绝对性能受限</li>
+<li><strong>内存带宽比例</strong>：相对于计算能力，内存带宽更充裕</li>
+</ol>
+<p><strong>特殊指令支持差异</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 检查计算能力并选择相应算法</span>
+<span class="cp">#if __CUDA_ARCH__ &gt;= 700  </span><span class="c1">// Volta及以上</span>
+<span class="w">    </span><span class="c1">// 使用Tensor Core加速</span>
+<span class="w">    </span><span class="n">wmma</span><span class="o">::</span><span class="n">fragment</span><span class="o">&lt;</span><span class="p">...</span><span class="o">&gt;</span><span class="w"> </span><span class="n">a_frag</span><span class="p">,</span><span class="w"> </span><span class="n">b_frag</span><span class="p">,</span><span class="w"> </span><span class="n">c_frag</span><span class="p">;</span>
+<span class="w">    </span><span class="n">wmma</span><span class="o">::</span><span class="n">load_matrix_sync</span><span class="p">(</span><span class="n">a_frag</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span>
+<span class="cp">#elif __CUDA_ARCH__ &gt;= 600  </span><span class="c1">// Pascal</span>
+<span class="w">    </span><span class="c1">// 使用半精度但无Tensor Core</span>
+<span class="w">    </span><span class="n">__half2</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__hmul2</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">);</span>
+<span class="cp">#else</span>
+<span class="w">    </span><span class="c1">// Maxwell：仅支持单精度</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="cp">#endif</span>
+</code></pre></div>
+
+<p><strong>Warp调度差异</strong>：</p>
+<ul>
+<li>桌面GPU：4个warp调度器/SM（Ampere）</li>
+<li>Jetson Orin：4个warp调度器/SM</li>
+<li>Jetson Xavier：4个warp调度器/SM</li>
+<li>Jetson Nano：2个warp调度器/SM</li>
+</ul>
+<p>这影响指令级并行度（ILP）的优化策略。</p>
+<h3 id="2114">21.1.4 硬件加速器生态</h3>
+<p>Jetson集成了多种专用加速器，充分利用这些加速器是达到最优性能的关键：</p>
+<p><strong>DLA（Deep Learning Accelerator）</strong>：</p>
+<div class="codehilite"><pre><span></span><code>特点：
+
+- 专用于INT8推理
+- 功耗极低（0.5-1W）
+- 支持常见CNN层
+- 可与GPU并行工作
+
+使用场景：
+
+- 背景分割等低精度任务
+- 多模型并行推理
+- 功耗敏感的持续运行任务
+</code></pre></div>
+
+<p><strong>VIC（Video Image Compositor）</strong>：</p>
+<div class="codehilite"><pre><span></span><code>功能：
+
+- 颜色空间转换（YUV↔RGB）
+- 图像缩放和裁剪
+- 多路视频合成
+- 去噪和增强
+
+编程接口：
+
+- Multimedia API
+- VPI（Vision Programming Interface）
+</code></pre></div>
+
+<p><strong>NVENC/NVDEC</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">编码支持</span><span class="err">：</span><span class="n">H</span><span class="mf">.264</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="mf">.265</span><span class="p">,</span><span class="w"> </span><span class="n">VP9</span>
+<span class="n">性能</span><span class="err">：</span><span class="mi">4</span><span class="n">K</span><span class="mf">@30f</span><span class="n">ps</span><span class="err">（</span><span class="n">多路</span><span class="err">）</span>
+<span class="n">应用</span><span class="err">：</span><span class="n">视频流处理</span><span class="err">、</span><span class="n">录制</span>
+</code></pre></div>
+
+<p><strong>ISP（Image Signal Processor）</strong>：</p>
+<div class="codehilite"><pre><span></span><code>功能：
+
+- RAW图像处理
+- 自动曝光/白平衡
+- HDR合成
+- 镜头畸变校正
+
+集成方式：
+
+- Argus API
+- GStreamer插件
+</code></pre></div>
+
+<p>协同使用示例流程：</p>
+<div class="codehilite"><pre><span></span><code>摄像头 → ISP → VIC → GPU/DLA → NVENC → 网络传输
+   ↓       ↓      ↓        ↓         ↓
+  RAW   去噪  缩放   AI推理   压缩编码
+</code></pre></div>
+
+<p>性能对比（YOLOv5推理）：</p>
+<div class="codehilite"><pre><span></span><code>执行单元    功耗    FPS    延迟
+GPU only    15W     30     33ms
+GPU + DLA   12W     45     22ms
+DLA only    2W      15     67ms
+</code></pre></div>
+
+<h2 id="212">21.2 功耗优化策略</h2>
+<p>在边缘设备上，功耗直接影响续航时间、散热需求和系统可靠性。Jetson提供了多层次的功耗管理机制，从系统级到指令级都有相应的优化手段。</p>
+<h3 id="2121-dvfs">21.2.1 功耗模式与DVFS</h3>
+<p>Jetson支持多种预定义的功耗模式，通过动态电压频率调节（DVFS）平衡性能与功耗：</p>
+<p><strong>预设功耗模式</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 查看当前功耗模式</span>
+sudo<span class="w"> </span>nvpmodel<span class="w"> </span>-q
+
+<span class="c1"># 切换到不同模式（以Orin为例）</span>
+sudo<span class="w"> </span>nvpmodel<span class="w"> </span>-m<span class="w"> </span><span class="m">0</span><span class="w">  </span><span class="c1"># MAXN模式：最高性能，60W</span>
+sudo<span class="w"> </span>nvpmodel<span class="w"> </span>-m<span class="w"> </span><span class="m">1</span><span class="w">  </span><span class="c1"># 50W模式</span>
+sudo<span class="w"> </span>nvpmodel<span class="w"> </span>-m<span class="w"> </span><span class="m">2</span><span class="w">  </span><span class="c1"># 30W模式</span>
+sudo<span class="w"> </span>nvpmodel<span class="w"> </span>-m<span class="w"> </span><span class="m">3</span><span class="w">  </span><span class="c1"># 15W模式</span>
+
+<span class="c1"># 自定义功耗配置</span>
+sudo<span class="w"> </span>nano<span class="w"> </span>/etc/nvpmodel.conf
+</code></pre></div>
+
+<p><strong>Jetson Orin功耗模式详解</strong>：</p>
+<div class="codehilite"><pre><span></span><code>模式  CPU核心  频率      GPU频率   内存频率  功耗   应用场景
+------------------------------------------------------------------
+MAXN  12      2.2GHz    1.3GHz    3.2GHz   60W    最高性能
+50W   12      2.0GHz    1.1GHz    3.2GHz   50W    平衡模式
+30W   8       1.8GHz    900MHz    2.1GHz   30W    功耗优先
+15W   4       1.5GHz    625MHz    1.6GHz   15W    低功耗
+</code></pre></div>
+
+<p><strong>动态频率管理</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 手动设置GPU频率</span>
+sudo<span class="w"> </span>jetson_clocks<span class="w"> </span>--show<span class="w">  </span><span class="c1"># 显示当前频率</span>
+sudo<span class="w"> </span>jetson_clocks<span class="w">         </span><span class="c1"># 锁定最高频率</span>
+sudo<span class="w"> </span>jetson_clocks<span class="w"> </span>--restore<span class="w">  </span><span class="c1"># 恢复动态调节</span>
+
+<span class="c1"># 细粒度频率控制</span>
+<span class="nb">echo</span><span class="w"> </span><span class="m">1300000000</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/devices/17000000.gpu/devfreq/17000000.gpu/max_freq
+<span class="nb">echo</span><span class="w"> </span><span class="m">625000000</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/devices/17000000.gpu/devfreq/17000000.gpu/min_freq
+</code></pre></div>
+
+<p><strong>应用级功耗管理API</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// CUDA程序中设置GPU频率</span>
+<span class="n">cudaDeviceSetLimit</span><span class="p">(</span><span class="n">cudaLimitDevRuntimeSyncDepth</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+
+<span class="c1">// 使用NVML API进行功耗监控</span>
+<span class="n">nvmlReturn_t</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="n">nvmlDevice_t</span><span class="w"> </span><span class="n">device</span><span class="p">;</span>
+<span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">power</span><span class="p">;</span>
+
+<span class="n">nvmlInit</span><span class="p">();</span>
+<span class="n">nvmlDeviceGetHandleByIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">device</span><span class="p">);</span>
+<span class="n">nvmlDeviceGetPowerUsage</span><span class="p">(</span><span class="n">device</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">power</span><span class="p">);</span><span class="w">  </span><span class="c1">// 获取实时功耗（毫瓦）</span>
+</code></pre></div>
+
+<h3 id="2122">21.2.2 内核级功耗优化</h3>
+<p>CUDA内核的设计直接影响功耗，优化策略包括：</p>
+<p><strong>1. 降低动态功耗</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 低功耗版本：减少活跃线程数</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">kernel_low_power</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">stride</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">gridDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 使用更大的stride，减少活跃SM数量</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tid</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">stride</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 使用更低精度的运算</span>
+<span class="w">        </span><span class="n">__half2</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__float2half2_rn</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">        </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__hmul2</span><span class="p">(</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">__float2half2_rn</span><span class="p">(</span><span class="mf">0.5f</span><span class="p">));</span>
+<span class="w">        </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__half2float</span><span class="p">(</span><span class="n">val</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 插入空闲周期降低功耗</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">((</span><span class="n">i</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xFF</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">__nanosleep</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span><span class="w">  </span><span class="c1">// PTX级别的休眠</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>2. 利用低功耗指令</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用FMA指令减少指令数</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fmaf</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="p">);</span><span class="w">  </span><span class="c1">// 比 a*b+c 功耗更低</span>
+
+<span class="c1">// 使用位运算代替除法</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">div_by_32</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">  </span><span class="c1">// 代替 value / 32</span>
+
+<span class="c1">// 使用查表代替复杂计算</span>
+<span class="kt">__constant__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">lut</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lut</span><span class="p">[</span><span class="n">index</span><span class="p">];</span><span class="w">  </span><span class="c1">// 代替 sinf/cosf等</span>
+</code></pre></div>
+
+<p><strong>3. 内存访问优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用纹理内存降低功耗（缓存友好）</span>
+<span class="n">texture</span><span class="o">&lt;</span><span class="kt">float4</span><span class="p">,</span><span class="w"> </span><span class="n">cudaTextureType2D</span><span class="o">&gt;</span><span class="w"> </span><span class="n">tex</span><span class="p">;</span>
+<span class="kt">float4</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tex2D</span><span class="p">(</span><span class="n">tex</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">);</span>
+
+<span class="c1">// 合并访问减少内存事务</span>
+<span class="kt">float4</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">ptr</span><span class="p">)[</span><span class="n">tid</span><span class="p">];</span>
+
+<span class="c1">// 使用共享内存减少全局内存访问</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">cache</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="n">cache</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">global_data</span><span class="p">[</span><span class="n">tid</span><span class="p">];</span>
+<span class="nf">__syncthreads</span><span class="p">();</span>
+</code></pre></div>
+
+<p><strong>4. Warp级优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 保持warp内线程同步，减少分支分歧</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">__all_sync</span><span class="p">(</span><span class="mh">0xFFFFFFFF</span><span class="p">,</span><span class="w"> </span><span class="n">condition</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 所有线程执行相同路径</span>
+<span class="p">}</span>
+
+<span class="c1">// 使用warp级原语减少同步开销</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__reduce_add_sync</span><span class="p">(</span><span class="mh">0xFFFFFFFF</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="2123">21.2.3 内存访问模式优化</h3>
+<p>内存访问是功耗的主要来源，优化策略包括：</p>
+<p><strong>1. 数据布局优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// AoS转SoA减少内存事务</span>
+<span class="c1">// 低效（AoS）：</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Point</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+<span class="n">Point</span><span class="w"> </span><span class="n">points</span><span class="p">[</span><span class="n">N</span><span class="p">];</span>
+
+<span class="c1">// 高效（SoA）：</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Points</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">[</span><span class="n">N</span><span class="p">],</span><span class="w"> </span><span class="n">y</span><span class="p">[</span><span class="n">N</span><span class="p">],</span><span class="w"> </span><span class="n">z</span><span class="p">[</span><span class="n">N</span><span class="p">];</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>2. 缓存优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// L2缓存持久化</span>
+<span class="n">cudaFuncSetAttribute</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span><span class="w"> </span>
+<span class="w">    </span><span class="n">cudaFuncAttributePreferredSharedMemoryCarveout</span><span class="p">,</span><span class="w"> </span>
+<span class="w">    </span><span class="n">cudaSharedmemCarveoutMaxL1</span><span class="p">);</span>
+
+<span class="c1">// 设置L2缓存驻留</span>
+<span class="n">cudaDeviceSetLimit</span><span class="p">(</span><span class="n">cudaLimitPersistingL2CacheSize</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="o">*</span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="c1">// 使用缓存提示</span>
+<span class="n">__builtin_prefetch</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span><span class="w">  </span><span class="c1">// 预取到L1</span>
+</code></pre></div>
+
+<p><strong>3. 内存压缩</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用压缩数据格式</span>
+<span class="c1">// 原始：float[1024] = 4KB</span>
+<span class="c1">// 压缩：half[1024] = 2KB</span>
+<span class="c1">// 或使用自定义量化</span>
+<span class="kt">uint8_t</span><span class="w"> </span><span class="n">quantized</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">uint8_t</span><span class="p">)(</span><span class="n">value</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">255.0f</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">restored</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">quantized</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">255.0f</span><span class="p">;</span>
+</code></pre></div>
+
+<p><strong>4. 批处理与流水线</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 双缓冲减少空闲等待</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">buffer</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">256</span><span class="p">];</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="c1">// 加载第一批数据</span>
+<span class="n">buffer</span><span class="p">[</span><span class="n">current</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="n">tid</span><span class="p">];</span>
+<span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">batches</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 异步加载下一批</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">buffer</span><span class="p">[</span><span class="mi">1</span><span class="o">-</span><span class="n">current</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="n">tid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="o">*</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 处理当前批</span>
+<span class="w">    </span><span class="n">process</span><span class="p">(</span><span class="n">buffer</span><span class="p">[</span><span class="n">current</span><span class="p">]);</span>
+
+<span class="w">    </span><span class="n">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">current</span><span class="p">;</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="2124">21.2.4 热管理与散热设计</h3>
+<p>热管理对维持性能和系统稳定性至关重要：</p>
+<p><strong>温度监控</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 实时温度监控</span>
+tegrastats<span class="w">  </span><span class="c1"># 显示CPU/GPU温度、频率、功耗</span>
+
+<span class="c1"># 读取温度传感器</span>
+cat<span class="w"> </span>/sys/devices/virtual/thermal/thermal_zone*/temp
+
+<span class="c1"># Python监控脚本</span>
+import<span class="w"> </span>os
+def<span class="w"> </span>get_temps<span class="o">()</span>:
+<span class="w">    </span><span class="nv">zones</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[]</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span>range<span class="o">(</span><span class="m">10</span><span class="o">)</span>:
+<span class="w">        </span>try:
+<span class="w">            </span>with<span class="w"> </span>open<span class="o">(</span>f<span class="s1">&#39;/sys/devices/virtual/thermal/thermal_zone{i}/temp&#39;</span><span class="o">)</span><span class="w"> </span>as<span class="w"> </span>f:
+<span class="w">                </span><span class="nv">temp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>int<span class="o">(</span>f.read<span class="o">())</span><span class="w"> </span>/<span class="w"> </span><span class="m">1000</span>.0
+<span class="w">                </span>zones.append<span class="o">(</span>temp<span class="o">)</span>
+<span class="w">        </span>except:
+<span class="w">            </span><span class="k">break</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span>zones
+</code></pre></div>
+
+<p><strong>热节流策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 应用级热管理</span>
+<span class="n">class</span><span class="w"> </span><span class="n">ThermalManager</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">temp_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">75.0f</span><span class="p">;</span><span class="w">  </span><span class="c1">// 摄氏度</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">current_scale</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">adjust_workload</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">temp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_gpu_temperature</span><span class="p">();</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">temp</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">temp_threshold</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">current_scale</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mf">0.9f</span><span class="p">;</span><span class="w">  </span><span class="c1">// 降低10%负载</span>
+<span class="w">            </span><span class="n">usleep</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span><span class="w">  </span><span class="c1">// 增加延迟</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">temp</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">temp_threshold</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">5.0f</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">current_scale</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min</span><span class="p">(</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="n">current_scale</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1.1f</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 调整内核配置</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">base_blocks</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">current_scale</span><span class="p">;</span>
+<span class="w">        </span><span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="o">&gt;&gt;&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>散热优化最佳实践</strong>：</p>
+<ol>
+<li><strong>任务调度</strong>：在温度低谷期执行高强度任务</li>
+<li><strong>负载均衡</strong>：在CPU/GPU/DLA间分配任务</li>
+<li><strong>间歇运行</strong>：插入空闲周期让芯片降温</li>
+<li><strong>功耗上限</strong>：设置功耗预算避免过热</li>
+</ol>
+<p><strong>系统级散热配置</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 配置风扇曲线</span>
+sudo<span class="w"> </span>nano<span class="w"> </span>/etc/nvfancontrol.conf
+
+<span class="c1"># 示例配置</span>
+FAN_PROFILE<span class="w"> </span>quiet<span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="c1">#temp   fan_speed</span>
+<span class="w">    </span><span class="m">20</span><span class="w">      </span><span class="m">0</span>
+<span class="w">    </span><span class="m">50</span><span class="w">      </span><span class="m">30</span>
+<span class="w">    </span><span class="m">70</span><span class="w">      </span><span class="m">60</span>
+<span class="w">    </span><span class="m">85</span><span class="w">      </span><span class="m">100</span>
+<span class="o">}</span>
+
+<span class="c1"># 应用配置</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>nvfancontrol
+</code></pre></div>
+
+<p>功耗优化验证工具：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 使用tegrastats记录功耗数据</span>
+tegrastats<span class="w"> </span>--logfile<span class="w"> </span>power_log.txt
+
+<span class="c1"># 分析功耗模式</span>
+python3<span class="w"> </span>analyze_power.py<span class="w"> </span>power_log.txt
+
+<span class="c1"># 功耗与性能权衡分析</span>
+<span class="c1"># FPS/Watt指标是关键评估标准</span>
+</code></pre></div>
+
+<h2 id="213">21.3 统一内存的最佳实践</h2>
+<p>Jetson的统一内存架构是其独特优势，正确使用可以显著简化编程并提升性能。本节详细探讨各种统一内存技术的最佳实践。</p>
+<h3 id="2131">21.3.1 零拷贝内存使用</h3>
+<p>零拷贝内存允许CPU和GPU直接访问相同的物理内存，避免数据传输开销：</p>
+<p><strong>零拷贝内存分配方式</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 方式1：固定内存映射</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">cpu_ptr</span><span class="p">;</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">gpu_ptr</span><span class="p">;</span>
+<span class="n">cudaHostAlloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cpu_ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaHostAllocMapped</span><span class="p">);</span>
+<span class="n">cudaHostGetDevicePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gpu_ptr</span><span class="p">,</span><span class="w"> </span><span class="n">cpu_ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+
+<span class="c1">// 方式2：统一内存（推荐）</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="n">cudaMallocManaged</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+
+<span class="c1">// 方式3：系统分配内存注册</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="n">cudaHostRegister</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaHostRegisterMapped</span><span class="p">);</span>
+<span class="n">cudaHostGetDevicePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gpu_ptr</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</code></pre></div>
+
+<p><strong>零拷贝访问模式对比</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 传统模式：需要显式拷贝</span>
+<span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">h_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">d_data</span><span class="p">;</span>
+<span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">d_data</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">d_data</span><span class="p">,</span><span class="w"> </span><span class="n">h_data</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">d_data</span><span class="p">);</span>
+<span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">h_data</span><span class="p">,</span><span class="w"> </span><span class="n">d_data</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+
+<span class="c1">// 零拷贝模式：直接访问</span>
+<span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
+<span class="n">cudaMallocManaged</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="c1">// CPU初始化</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="c1">// GPU处理</span>
+<span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
+<span class="n">cudaDeviceSynchronize</span><span class="p">();</span>
+<span class="c1">// CPU读取结果</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</code></pre></div>
+
+<p><strong>性能优化技巧</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 1. 使用访问提示优化页面放置</span>
+<span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemAdviseSetPreferredLocation</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemAdviseSetAccessedBy</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+
+<span class="c1">// 2. 批量处理减少页面故障</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">batch_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">;</span><span class="w">  </span><span class="c1">// 1MB批次</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">total_size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">batch_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">cudaMemPrefetchAsync</span><span class="p">(</span><span class="n">ptr</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">batch_size</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="p">);</span>
+<span class="w">    </span><span class="n">process_batch</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">ptr</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// 3. 使用流实现异步处理</span>
+<span class="n">cudaStream_t</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
+<span class="n">cudaStreamCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stream</span><span class="p">);</span>
+<span class="n">cudaMemPrefetchAsync</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="p">);</span>
+<span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="2132">21.3.2 页面迁移策略</h3>
+<p>统一内存的页面迁移策略直接影响性能：</p>
+<p><strong>页面迁移触发机制</strong>：</p>
+<div class="codehilite"><pre><span></span><code>触发条件         CPU访问    GPU访问    迁移方向
+-----------------------------------------------
+首次访问         是         是         访问者
+页面故障         是         是         故障位置
+预取操作         手动       手动       指定位置
+访问计数器       自动       自动       高频访问者
+</code></pre></div>
+
+<p><strong>优化页面迁移的策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">UnifiedMemoryManager</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">MemoryRegion</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">preferred_device</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaStream_t</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">MemoryRegion</span><span class="o">&gt;</span><span class="w"> </span><span class="n">regions</span><span class="p">;</span>
+
+<span class="n">public</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">allocate</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaMallocManaged</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">device</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// 设置首选位置</span>
+<span class="w">            </span><span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">cudaMemAdviseSetPreferredLocation</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">);</span>
+<span class="w">            </span><span class="c1">// 允许所有设备访问</span>
+<span class="w">            </span><span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">cudaMemAdviseSetAccessedBy</span><span class="p">,</span><span class="w"> </span><span class="n">cudaCpuDeviceId</span><span class="p">);</span>
+<span class="w">            </span><span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                </span><span class="n">cudaMemAdviseSetAccessedBy</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">regions</span><span class="p">.</span><span class="n">push_back</span><span class="p">({</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">});</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">prefetch</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">device</span><span class="p">,</span><span class="w"> </span><span class="n">cudaStream_t</span><span class="w"> </span><span class="n">stream</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">find_region</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">regions</span><span class="p">.</span><span class="n">end</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">cudaMemPrefetchAsync</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">it</span><span class="o">-&gt;</span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="p">);</span>
+<span class="w">            </span><span class="n">it</span><span class="o">-&gt;</span><span class="n">preferred_device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">device</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">optimize_placement</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 基于访问模式动态调整</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">regions</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">size_t</span><span class="w"> </span><span class="n">free_mem</span><span class="p">,</span><span class="w"> </span><span class="n">total_mem</span><span class="p">;</span>
+<span class="w">            </span><span class="n">cudaMemGetInfo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">free_mem</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">total_mem</span><span class="p">);</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">free_mem</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">region</span><span class="p">.</span><span class="n">size</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// 内存充足，预取到GPU</span>
+<span class="w">                </span><span class="n">prefetch</span><span class="p">(</span><span class="n">region</span><span class="p">.</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">.</span><span class="n">stream</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// 内存紧张，保留在CPU</span>
+<span class="w">                </span><span class="n">prefetch</span><span class="p">(</span><span class="n">region</span><span class="p">.</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">cudaCpuDeviceId</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">.</span><span class="n">stream</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>避免页面抖动</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 问题：频繁的CPU/GPU交替访问导致页面抖动</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">bad_pattern</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// CPU写入</span>
+<span class="w">        </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="w">        </span><span class="c1">// GPU处理（触发迁移到GPU）</span>
+<span class="w">        </span><span class="n">process</span><span class="o">&lt;&lt;&lt;</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
+<span class="w">        </span><span class="c1">// CPU读取（触发迁移回CPU）</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 解决：批量处理，减少迁移次数</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">good_pattern</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// CPU批量初始化</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// 预取到GPU</span>
+<span class="w">    </span><span class="n">cudaMemPrefetchAsync</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// GPU批量处理</span>
+<span class="w">    </span><span class="n">process</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+<span class="w">    </span><span class="n">cudaDeviceSynchronize</span><span class="p">();</span>
+<span class="w">    </span><span class="c1">// 预取回CPU</span>
+<span class="w">    </span><span class="n">cudaMemPrefetchAsync</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">),</span><span class="w"> </span><span class="n">cudaCpuDeviceId</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// CPU批量读取</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="2133">21.3.3 内存池管理</h3>
+<p>在Jetson上实现高效的内存池管理可以减少分配开销和碎片化：</p>
+<p><strong>自定义内存池实现</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">JetsonMemoryPool</span><span class="w"> </span><span class="p">{</span>
+<span class="n">private</span><span class="o">:</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Block</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">bool</span><span class="w"> </span><span class="n">in_use</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">device_hint</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Block</span><span class="o">&gt;</span><span class="w"> </span><span class="n">blocks</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="w"> </span><span class="n">pool_mutex</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">total_allocated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">max_pool_size</span><span class="p">;</span>
+
+<span class="n">public</span><span class="o">:</span>
+<span class="w">    </span><span class="n">JetsonMemoryPool</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">max_size</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">max_pool_size</span><span class="p">(</span><span class="n">max_size</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">allocate</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">pool_mutex</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 查找可重用的块</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">block</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">blocks</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">block</span><span class="p">.</span><span class="n">in_use</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">block</span><span class="p">.</span><span class="n">size</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">                </span><span class="n">block</span><span class="p">.</span><span class="n">size</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1.5</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// 避免过度浪费</span>
+<span class="w">                </span><span class="n">block</span><span class="p">.</span><span class="n">in_use</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+
+<span class="w">                </span><span class="c1">// 根据新的设备提示调整</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">device</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">block</span><span class="p">.</span><span class="n">device_hint</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">block</span><span class="p">.</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">block</span><span class="p">.</span><span class="n">size</span><span class="p">,</span>
+<span class="w">                        </span><span class="n">cudaMemAdviseSetPreferredLocation</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">);</span>
+<span class="w">                    </span><span class="n">block</span><span class="p">.</span><span class="n">device_hint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">device</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">block</span><span class="p">.</span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 分配新块</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">total_allocated</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">max_pool_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">            </span><span class="n">cudaMallocManaged</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">device</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">cudaMemAdvise</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span>
+<span class="w">                    </span><span class="n">cudaMemAdviseSetPreferredLocation</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="n">blocks</span><span class="p">.</span><span class="n">push_back</span><span class="p">({</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span><span class="w"> </span><span class="n">device</span><span class="p">});</span>
+<span class="w">            </span><span class="n">total_allocated</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">nullptr</span><span class="p">;</span><span class="w">  </span><span class="c1">// 池已满</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">deallocate</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">pool_mutex</span><span class="p">);</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">block</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">blocks</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">block</span><span class="p">.</span><span class="n">ptr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ptr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">block</span><span class="p">.</span><span class="n">in_use</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">                </span><span class="c1">// 可选：清理内存内容</span>
+<span class="w">                </span><span class="n">cudaMemsetAsync</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">block</span><span class="p">.</span><span class="n">size</span><span class="p">);</span>
+<span class="w">                </span><span class="k">return</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">defragment</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 合并相邻的空闲块</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">sort</span><span class="p">(</span><span class="n">blocks</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">blocks</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+<span class="w">            </span><span class="p">[](</span><span class="k">const</span><span class="w"> </span><span class="n">Block</span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">Block</span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">ptr</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">            </span><span class="p">});</span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">blocks</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">in_use</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">].</span><span class="n">in_use</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">                </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">ptr</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">size</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">].</span><span class="n">ptr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// 合并块</span>
+<span class="w">                </span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">].</span><span class="n">size</span><span class="p">;</span>
+<span class="w">                </span><span class="n">blocks</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">blocks</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">i</span><span class="o">++</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h3 id="2134-dma">21.3.4 DMA优化技术</h3>
+<p>直接内存访问（DMA）优化可以释放CPU资源并提升传输效率：</p>
+<p><strong>DMA传输优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用异步内存操作</span>
+<span class="n">class</span><span class="w"> </span><span class="n">DMAOptimizer</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">cudaStream_t</span><span class="w"> </span><span class="n">dma_stream</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">queue</span><span class="o">&lt;</span><span class="n">cudaEvent_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">pending_events</span><span class="p">;</span>
+
+<span class="n">public</span><span class="o">:</span>
+<span class="w">    </span><span class="n">DMAOptimizer</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 创建专用DMA流</span>
+<span class="w">        </span><span class="n">cudaStreamCreateWithPriority</span><span class="p">(</span><span class="o">&amp;</span><span class="n">dma_stream</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaStreamNonBlocking</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="p">);</span><span class="w">  </span><span class="c1">// 高优先级</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">async_transfer</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 使用DMA引擎进行传输</span>
+<span class="w">        </span><span class="n">cudaMemcpyAsync</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">cudaMemcpyDefault</span><span class="p">,</span><span class="w"> </span><span class="n">dma_stream</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 记录事件用于同步</span>
+<span class="w">        </span><span class="n">cudaEvent_t</span><span class="w"> </span><span class="n">event</span><span class="p">;</span>
+<span class="w">        </span><span class="n">cudaEventCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cudaEventRecord</span><span class="p">(</span><span class="n">event</span><span class="p">,</span><span class="w"> </span><span class="n">dma_stream</span><span class="p">);</span>
+<span class="w">        </span><span class="n">pending_events</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">event</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">pipeline_transfer</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">src</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                          </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">chunks</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">chunk_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">chunks</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">chunks</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">size_t</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">;</span>
+
+<span class="w">            </span><span class="c1">// 异步传输当前块</span>
+<span class="w">            </span><span class="n">cudaMemcpyAsync</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">dst</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span>
+<span class="w">                          </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">src</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span>
+<span class="w">                          </span><span class="n">chunk_size</span><span class="p">,</span>
+<span class="w">                          </span><span class="n">cudaMemcpyDefault</span><span class="p">,</span>
+<span class="w">                          </span><span class="n">dma_stream</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// 在传输的同时可以处理前一块</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kt">size_t</span><span class="w"> </span><span class="n">prev_offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">;</span>
+<span class="w">                </span><span class="n">process</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">dma_stream</span><span class="o">&gt;&gt;&gt;</span>
+<span class="w">                    </span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">dst</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">prev_offset</span><span class="p">,</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>硬件DMA通道利用</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Jetson特定的DMA优化</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">optimize_for_jetson_dma</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 1. 对齐到页面边界</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">page_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4096</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">aligned_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">page_size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">~</span><span class="p">(</span><span class="n">page_size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 2. 使用大页面减少TLB压力</span>
+<span class="w">    </span><span class="n">madvise</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">aligned_size</span><span class="p">,</span><span class="w"> </span><span class="n">MADV_HUGEPAGE</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 3. 锁定内存防止交换</span>
+<span class="w">    </span><span class="n">mlock</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">aligned_size</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 4. 设置NUMA亲和性（如果适用）</span>
+<span class="w">    </span><span class="n">numa_tonode_memory</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">aligned_size</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>VIC硬件加速的DMA</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用VIC进行图像DMA和处理</span>
+<span class="n">class</span><span class="w"> </span><span class="n">VICDMAProcessor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">NvBufferSession</span><span class="o">*</span><span class="w"> </span><span class="n">session</span><span class="p">;</span>
+
+<span class="n">public</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">process_image_with_vic</span><span class="p">(</span><span class="kt">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">dst</span><span class="p">,</span>
+<span class="w">                                </span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 创建VIC兼容的缓冲区</span>
+<span class="w">        </span><span class="n">NvBufferCreateParams</span><span class="w"> </span><span class="n">params</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="w">        </span><span class="n">params</span><span class="p">.</span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">width</span><span class="p">;</span>
+<span class="w">        </span><span class="n">params</span><span class="p">.</span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">height</span><span class="p">;</span>
+<span class="w">        </span><span class="n">params</span><span class="p">.</span><span class="n">payloadType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NvBufferPayload_SurfArray</span><span class="p">;</span>
+<span class="w">        </span><span class="n">params</span><span class="p">.</span><span class="n">nvbuf_tag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NvBufferTag_VIC</span><span class="p">;</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">src_fd</span><span class="p">,</span><span class="w"> </span><span class="n">dst_fd</span><span class="p">;</span>
+<span class="w">        </span><span class="n">NvBufferCreateEx</span><span class="p">(</span><span class="o">&amp;</span><span class="n">src_fd</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">params</span><span class="p">);</span>
+<span class="w">        </span><span class="n">NvBufferCreateEx</span><span class="p">(</span><span class="o">&amp;</span><span class="n">dst_fd</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">params</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 使用VIC进行缩放+颜色转换（硬件DMA）</span>
+<span class="w">        </span><span class="n">NvBufferTransformParams</span><span class="w"> </span><span class="n">transform_params</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="w">        </span><span class="n">transform_params</span><span class="p">.</span><span class="n">transform_flag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>
+<span class="w">            </span><span class="n">NVBUFFER_TRANSFORM_FILTER</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">NVBUFFER_TRANSFORM_FLIP</span><span class="p">;</span>
+<span class="w">        </span><span class="n">transform_params</span><span class="p">.</span><span class="n">transform_filter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NvBufferTransform_Filter_Smart</span><span class="p">;</span>
+
+<span class="w">        </span><span class="n">NvBufferTransform</span><span class="p">(</span><span class="n">src_fd</span><span class="p">,</span><span class="w"> </span><span class="n">dst_fd</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">transform_params</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 结果可直接用于CUDA处理，无需额外拷贝</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">gpu_ptr</span><span class="p">;</span>
+<span class="w">        </span><span class="n">NvBufferMemMap</span><span class="p">(</span><span class="n">dst_fd</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">NvBufferMem_Read</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">gpu_ptr</span><span class="p">);</span>
+<span class="w">        </span><span class="n">process_cuda</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">gpu_ptr</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h2 id="214-tensorrt">21.4 TensorRT集成</h2>
+<h3 id="2141">21.4.1 模型转换流程</h3>
+<h3 id="2142-int8">21.4.2 INT8量化校准</h3>
+<h3 id="2143">21.4.3 动态批处理</h3>
+<h3 id="2144">21.4.4 插件开发与优化</h3>
+<h2 id="215-ai">21.5 案例：边缘AI部署</h2>
+<h3 id="2151">21.5.1 系统架构设计</h3>
+<h3 id="2152">21.5.2 多模型协同推理</h3>
+<h3 id="2153">21.5.3 实时性能优化</h3>
+<h3 id="2154">21.5.4 资源调度策略</h3>
+<h2 id="_1">本章小结</h2>
+<h2 id="_2">练习题</h2>
+<h2 id="_3">常见陷阱与错误</h2>
+<h2 id="_4">最佳实践检查清单</h2>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter20.html" class="nav-link prev">← 第20章：CUDA Graph与内核融合</a><a href="chapter22.html" class="nav-link next">第22章：稀疏计算与动态稀疏 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

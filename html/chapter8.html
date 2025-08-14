@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第8章：PTX内联与底层优化</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="8ptx">第8章：PTX内联与底层优化</h1>
+<p>本章深入探讨CUDA的底层优化技术，重点介绍PTX（Parallel Thread Execution）汇编语言及其内联使用。通过直接操作PTX指令，我们可以突破高级语言的限制，实现极致的性能优化。你将学习如何访问特殊寄存器、实现自定义浮点运算，以及在自动驾驶和具身智能场景中应用这些技术来实现超低延迟的关键算法。</p>
+<h2 id="81-ptx">8.1 PTX汇编语言基础</h2>
+<h3 id="811-ptx">8.1.1 PTX概述与架构</h3>
+<p>PTX（Parallel Thread Execution）是NVIDIA GPU的虚拟指令集架构，位于CUDA C++和实际GPU机器码（SASS）之间。它提供了一个稳定的、向前兼容的编程接口，让开发者能够访问底层硬件特性。</p>
+<div class="codehilite"><pre><span></span><code>CUDA C++ → PTX (虚拟ISA) → SASS (机器码)
+         ↑                  ↑
+      编译时             运行时JIT
+</code></pre></div>
+
+<p>PTX的主要特点：</p>
+<ul>
+<li><strong>虚拟寄存器</strong>：无限数量的虚拟寄存器，由JIT编译器分配到物理寄存器</li>
+<li><strong>强类型系统</strong>：支持多种数据类型（.b8/.b16/.b32/.b64/.f16/.f32/.f64）</li>
+<li><strong>SIMT执行模型</strong>：单指令多线程，与CUDA编程模型一致</li>
+<li><strong>内存层次感知</strong>：显式的内存空间修饰符（.global/.shared/.local/.const）</li>
+</ul>
+<h3 id="812-ptx">8.1.2 PTX基本语法</h3>
+<p>PTX采用类汇编语法，每条指令格式如下：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">[</span><span class="err">谓词@</span><span class="p">]</span><span class="err">指令</span><span class="p">[</span><span class="nv">.类型</span><span class="p">][</span><span class="nv">.修饰符</span><span class="p">]</span><span class="w"> </span><span class="err">目标操作数</span><span class="o">,</span><span class="w"> </span><span class="err">源操作数</span><span class="m">1</span><span class="o">,</span><span class="w"> </span><span class="p">[</span><span class="err">源操作数</span><span class="m">2</span><span class="o">,</span><span class="w"> </span><span class="nv">...</span><span class="p">];</span>
+</code></pre></div>
+
+<p>常见数据类型：</p>
+<ul>
+<li><code>.b{8,16,32,64}</code>: 位类型（无符号整数）</li>
+<li><code>.s{8,16,32,64}</code>: 有符号整数</li>
+<li><code>.u{8,16,32,64}</code>: 无符号整数</li>
+<li><code>.f{16,32,64}</code>: 浮点数</li>
+<li><code>.pred</code>: 谓词（布尔值）</li>
+</ul>
+<p>寄存器命名：</p>
+<ul>
+<li><code>%r{n}</code>: 32位寄存器</li>
+<li><code>%rd{n}</code>: 64位寄存器</li>
+<li><code>%f{n}</code>: 32位浮点寄存器</li>
+<li><code>%fd{n}</code>: 64位浮点寄存器</li>
+<li><code>%p{n}</code>: 谓词寄存器</li>
+</ul>
+<h3 id="813-ptx">8.1.3 内联PTX的基本方法</h3>
+<p>在CUDA C++中使用内联PTX的基本语法：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;PTX指令&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">输出操作数</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">输入操作数</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">破坏列表</span><span class="p">);</span>
+</code></pre></div>
+
+<p>示例：整数加法</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ptx_add</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.s32 %0, %1, %2;&quot;</span><span class="w"> </span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w">    </span><span class="c1">// 输出：result映射到寄存器</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="w">  </span><span class="c1">// 输入：a和b映射到寄存器</span>
+<span class="w">                </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>约束修饰符说明：</p>
+<ul>
+<li><code>"r"</code>: 32位寄存器</li>
+<li><code>"l"</code>: 64位寄存器</li>
+<li><code>"f"</code>: 32位浮点寄存器</li>
+<li><code>"d"</code>: 64位浮点寄存器</li>
+<li><code>"h"</code>: 16位寄存器（半精度）</li>
+<li><code>"n"</code>: 立即数</li>
+<li><code>"="</code>: 输出操作数</li>
+<li><code>"+"</code>: 输入输出操作数</li>
+</ul>
+<h3 id="814-ptx">8.1.4 PTX内存访问指令</h3>
+<p>全局内存访问：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">load_global</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">addr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;ld.global.f32 %0, [%1];&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">store_global</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">addr</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;st.global.f32 [%0], %1;&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="n">addr</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">value</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>共享内存访问（带bank控制）：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">load_shared_no_bank_conflict</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">addr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">offset</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 使用.cg修饰符避免bank conflict</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;ld.shared.cg.f32 %0, [%1 + %2];&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">addr</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">offset</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">4</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="815">8.1.5 条件执行与谓词</h3>
+<p>PTX支持谓词寄存器控制条件执行：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">conditional_fma</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">condition</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .pred p;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  setp.ne.b32 p, %4, 0;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">          </span><span class="c1">// 设置谓词</span>
+<span class="w">        </span><span class="s">&quot;  @p fma.rn.f32 %0, %1, %2, %3;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">  </span><span class="c1">// 条件执行FMA</span>
+<span class="w">        </span><span class="s">&quot;  @!p mov.f32 %0, %3;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">            </span><span class="c1">// 否则返回c</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">c</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">((</span><span class="kt">int</span><span class="p">)</span><span class="n">condition</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="82-ptx">8.2 内联PTX的使用场景</h2>
+<h3 id="821">8.2.1 性能关键路径优化</h3>
+<p>当编译器生成的代码不够优化时，手写PTX可以获得更好的性能：</p>
+<ol>
+<li><strong>消除不必要的寄存器移动</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 编译器可能生成多余的mov指令</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">compiler_version</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">temp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">temp</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// PTX版本：直接计算，减少寄存器使用</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">ptx_version</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;add.f32 %0, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;mul.f32 %0, %0, 0f40000000;&quot;</span><span class="w">  </span><span class="c1">// 2.0 in hex</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>指令级并行优化</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">dual_fma_ptx</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">out1</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">out2</span><span class="p">,</span>
+<span class="w">                              </span><span class="kt">float</span><span class="w"> </span><span class="n">a1</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b1</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c1</span><span class="p">,</span>
+<span class="w">                              </span><span class="kt">float</span><span class="w"> </span><span class="n">a2</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b2</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 r1, r2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 r1, %2, %3, %4;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">  </span><span class="c1">// 第一个FMA</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 r2, %5, %6, %7;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">  </span><span class="c1">// 并行执行第二个FMA</span>
+<span class="w">        </span><span class="s">&quot;  st.global.f32 [%0], r1;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  st.global.f32 [%1], r2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="n">out1</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="n">out2</span><span class="p">),</span>
+<span class="w">            </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a1</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b1</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">c1</span><span class="p">),</span>
+<span class="w">            </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a2</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b2</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">c2</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="822">8.2.2 访问特殊硬件功能</h3>
+<p>某些硬件功能只能通过PTX访问：</p>
+<ol>
+<li><strong>视频指令（用于计算机视觉）</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">sad_ptx</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;vabsdiff.u32.u32.u32.add %0, %1, %2, %3;&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">c</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>特殊的位操作</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">bit_field_extract</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                          </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                          </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;bfe.u32 %0, %1, %2, %3;&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">value</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">len</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="823">8.2.3 内存栅栏与同步优化</h3>
+<p>精确控制内存一致性：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">custom_memory_fence</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 仅对共享内存设置栅栏</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;membar.cta;&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 全局内存栅栏</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;membar.gl;&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 系统级栅栏</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;membar.sys;&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">optimized_barrier</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 带arrive-wait语义的barrier</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;bar.arrive.cta 0, 128;&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// 128个线程到达</span>
+<span class="w">    </span><span class="c1">// ... 其他工作</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;bar.sync 0, 128;&quot;</span><span class="p">);</span><span class="w">        </span><span class="c1">// 等待所有线程</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="824-loadstore">8.2.4 向量化load/store优化</h3>
+<p>使用PTX实现128位向量访问：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">vectorized_copy_128</span><span class="p">(</span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">            </span><span class="s">&quot;ld.global.v4.f32 {%0, %1, %2, %3}, [%4];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">            </span><span class="s">&quot;st.global.v4.f32 [%5], {%0, %1, %2, %3};&quot;</span>
+<span class="w">            </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dst</span><span class="p">[</span><span class="n">tid</span><span class="p">].</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dst</span><span class="p">[</span><span class="n">tid</span><span class="p">].</span><span class="n">y</span><span class="p">),</span><span class="w"> </span>
+<span class="w">              </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dst</span><span class="p">[</span><span class="n">tid</span><span class="p">].</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dst</span><span class="p">[</span><span class="n">tid</span><span class="p">].</span><span class="n">w</span><span class="p">)</span>
+<span class="w">            </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">src</span><span class="p">[</span><span class="n">tid</span><span class="p">]),</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">dst</span><span class="p">[</span><span class="n">tid</span><span class="p">])</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="825">8.2.5 自定义原子操作</h3>
+<p>实现编译器不支持的原子操作：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">atomic_fma</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">addr</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">old</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 expected, val, new;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  ld.global.f32 expected, [%1];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;retry:</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 new, %2, %3, expected;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  atom.global.cas.f32 val, [%1], expected, new;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  setp.ne.f32 p, val, expected;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  @p mov.f32 expected, val;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  @p bra retry;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mov.f32 %0, val;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="n">addr</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">old</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="83">8.3 特殊寄存器访问</h2>
+<h3 id="831">8.3.1 预定义特殊寄存器</h3>
+<p>PTX提供了一系列特殊寄存器，可以获取线程和硬件信息：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">get_thread_info</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tid_x</span><span class="p">,</span><span class="w"> </span><span class="n">tid_y</span><span class="p">,</span><span class="w"> </span><span class="n">tid_z</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">bid_x</span><span class="p">,</span><span class="w"> </span><span class="n">bid_y</span><span class="p">,</span><span class="w"> </span><span class="n">bid_z</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">dim_x</span><span class="p">,</span><span class="w"> </span><span class="n">dim_y</span><span class="p">,</span><span class="w"> </span><span class="n">dim_z</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">sm_id</span><span class="p">,</span><span class="w"> </span><span class="n">warp_id</span><span class="p">,</span><span class="w"> </span><span class="n">lane_id</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 线程索引</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%tid.x;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">tid_x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%tid.y;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">tid_y</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%tid.z;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">tid_z</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// 块索引</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%ctaid.x;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">bid_x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%ctaid.y;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">bid_y</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%ctaid.z;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">bid_z</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// 块维度</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%ntid.x;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">dim_x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%ntid.y;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">dim_y</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%ntid.z;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">dim_z</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// SM和warp信息</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%smid;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">sm_id</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%warpid;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">warp_id</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%laneid;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">lane_id</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="832">8.3.2 时钟计数器访问</h3>
+<p>高精度计时：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">get_global_timer</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">timer</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u64 %0, %%globaltimer;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=l&quot;</span><span class="p">(</span><span class="n">timer</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">timer</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">get_clock</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">clock</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u32 %0, %%clock;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">clock</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">clock</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 纳秒级计时器（Volta+）</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">get_nanoseconds</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">ns</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u64 %0, %%globaltimer_ns;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=l&quot;</span><span class="p">(</span><span class="n">ns</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ns</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 性能计数器使用示例</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">profile_code_section</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">;</span>
+<span class="w">    </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_global_timer</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// 待测量的代码段</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">__sinf</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.1f</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_global_timer</span><span class="p">();</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Thread %d: Elapsed cycles: %llu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="833">8.3.3 动态共享内存指针</h3>
+<p>获取动态共享内存的实际地址：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">get_dynamic_shared_mem</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u64 %0, %%dynamic_smem_ptr;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=l&quot;</span><span class="p">(</span><span class="n">ptr</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 用于多个动态共享内存数组的偏移计算</span>
+<span class="n">template</span><span class="o">&lt;</span><span class="n">typename</span><span class="w"> </span><span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="n">T</span><span class="o">*</span><span class="w"> </span><span class="n">get_shared_array</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">offset</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">extern</span><span class="w"> </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">shared_mem</span><span class="p">[];</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">base</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mov.u64 %0, %%dynamic_smem_ptr;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=l&quot;</span><span class="p">(</span><span class="n">base</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="n">T</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">static_cast</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">base</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">offset</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="834">8.3.4 谓词寄存器操作</h3>
+<p>直接操作谓词寄存器实现复杂条件逻辑：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">complex_condition</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .pred p1, p2, p3;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  setp.gt.s32 p1, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">      </span><span class="c1">// p1 = (a &gt; b)</span>
+<span class="w">        </span><span class="s">&quot;  setp.le.s32 p2, %2, %3;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">      </span><span class="c1">// p2 = (b &lt;= c)</span>
+<span class="w">        </span><span class="s">&quot;  and.pred p3, p1, p2;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">         </span><span class="c1">// p3 = p1 &amp;&amp; p2</span>
+<span class="w">        </span><span class="s">&quot;  selp.s32 %0, 1, 0, p3;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">       </span><span class="c1">// result = p3 ? 1 : 0</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="84">8.4 自定义浮点运算</h2>
+<h3 id="841">8.4.1 舍入模式控制</h3>
+<p>PTX允许精确控制浮点运算的舍入模式：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">custom_rounding_add</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">rn</span><span class="p">,</span><span class="w"> </span><span class="n">rz</span><span class="p">,</span><span class="w"> </span><span class="n">ru</span><span class="p">,</span><span class="w"> </span><span class="n">rd</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Round to Nearest (默认)</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.rn.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">rn</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// Round toward Zero</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.rz.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">rz</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// Round Up (toward +∞)</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.ru.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">ru</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// Round Down (toward -∞)</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.rd.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">rd</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">));</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">rn</span><span class="p">;</span><span class="w">  </span><span class="c1">// 返回默认舍入结果</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="842">8.4.2 饱和运算</h3>
+<p>实现饱和算术（clamp到[0,1]）：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">saturated_fma</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;fma.rn.sat.f32 %0, %1, %2, %3;&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">c</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span><span class="w">  </span><span class="c1">// 结果被clamp到[0.0, 1.0]</span>
+<span class="p">}</span>
+
+<span class="c1">// 整数饱和加法</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">saturated_add_int</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.sat.s32 %0, %1, %2;&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="843">8.4.3 快速近似运算</h3>
+<p>使用硬件加速的近似运算：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_reciprocal</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 快速倒数近似（精度约22位）</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;rcp.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_rsqrt</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 快速倒数平方根（1/sqrt(x)）</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;rsqrt.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_sqrt</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 快速平方根</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;sqrt.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 快速三角函数（Tesla架构）</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_sin</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;sin.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="844-fp16">8.4.4 自定义FP16运算</h3>
+<p>半精度浮点运算优化：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="n">__half2</span><span class="w"> </span><span class="n">custom_h2_fma</span><span class="p">(</span><span class="n">__half2</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">__half2</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">__half2</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">__half2</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;fma.rn.f16x2 %0, %1, %2, %3;&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">result</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">a</span><span class="p">),</span>
+<span class="w">                   </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">b</span><span class="p">),</span>
+<span class="w">                   </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">c</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// FP16到FP32转换</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float2</span><span class="w"> </span><span class="n">h2_to_f2</span><span class="p">(</span><span class="n">__half2</span><span class="w"> </span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float2</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f16x2 h;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mov.b32 h, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  cvt.f32.f16 %0, h.x;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  cvt.f32.f16 %1, h.y;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">y</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">h</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="845-sfu">8.4.5 特殊函数单元(SFU)操作</h3>
+<p>直接访问特殊函数单元：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_exp2</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 2^x 快速计算</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;ex2.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_log2</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// log2(x) 快速计算</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;lg2.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 组合运算：x^y = 2^(y * log2(x))</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fast_pow</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 logx;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  lg2.approx.f32 logx, %1;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 logx, logx, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  ex2.approx.f32 %0, logx;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="85">8.5 案例：超低延迟的特殊函数实现</h2>
+<h3 id="851">8.5.1 自动驾驶场景：快速距离计算</h3>
+<p>在激光雷达点云处理中，需要大量计算点到点的欧几里得距离：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 标准实现</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">standard_distance</span><span class="p">(</span><span class="kt">float3</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">dx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">dy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">dz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">sqrtf</span><span class="p">(</span><span class="n">dx</span><span class="o">*</span><span class="n">dx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dy</span><span class="o">*</span><span class="n">dy</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dz</span><span class="o">*</span><span class="n">dz</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// PTX优化版本：使用FMA和快速平方根</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">ptx_fast_distance</span><span class="p">(</span><span class="kt">float3</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float3</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">dist_sq</span><span class="p">,</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 dx, dy, dz, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sub.f32 dx, %1, %4;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sub.f32 dy, %2, %5;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sub.f32 dz, %3, %6;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 sum, dx, dx;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 sum, dy, dy, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, dz, dz, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dist_sq</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 快速平方根</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;sqrt.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">dist_sq</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 批量距离计算（向量化）</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">batch_distance_kernel</span><span class="p">(</span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">points</span><span class="p">,</span><span class="w"> </span><span class="kt">float4</span><span class="w"> </span><span class="n">reference</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                     </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">distances</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float4</span><span class="w"> </span><span class="n">p</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 128位向量加载</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;ld.global.v4.f32 {%0, %1, %2, %3}, [%4];&quot;</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">w</span><span class="p">)</span>
+<span class="w">                 </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]));</span>
+
+<span class="w">    </span><span class="c1">// 距离计算（忽略w分量）</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 dx, dy, dz, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sub.f32 dx, %1, %4;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sub.f32 dy, %2, %5;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sub.f32 dz, %3, %6;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 sum, dx, dx;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 sum, dy, dy, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 sum, dz, dz, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  sqrt.approx.f32 %0, sum;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">reference</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">reference</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">reference</span><span class="p">.</span><span class="n">z</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">distances</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="852">8.5.2 具身智能场景：快速四元数运算</h3>
+<p>机器人姿态估计中的四元数乘法优化：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 四元数结构</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Quaternion</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="c1">// 标准四元数乘法</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">quat_mul_standard</span><span class="p">(</span><span class="n">Quaternion</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="n">result</span><span class="p">.</span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="n">result</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="n">result</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="n">result</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="o">*</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// PTX优化版本：最大化FMA使用</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">quat_mul_ptx</span><span class="p">(</span><span class="n">Quaternion</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// w分量：w1*w2 - x1*x2 - y1*y2 - z1*z2</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 temp;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %3, %4, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">  </span><span class="c1">// 注意符号，使用负的FMA</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %5, %6, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %7, %8, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">w</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// x分量：w1*x2 + x1*w2 + y1*z2 - z1*y2</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %3, %4, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %5, %6, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %7, %8, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">x</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// y分量：w1*y2 - x1*z2 + y1*w2 + z1*x2</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %3, %4, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %5, %6, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %7, %8, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">y</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// z分量：w1*z2 + x1*y2 - y1*x2 + z1*w2</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %3, %4, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %5, %6, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %7, %8, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">z</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">w</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">),</span>
+<span class="w">          </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">w</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 四元数归一化（快速版本）</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">quat_normalize_fast</span><span class="p">(</span><span class="n">Quaternion</span><span class="w"> </span><span class="n">q</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">norm_sq</span><span class="p">,</span><span class="w"> </span><span class="n">inv_norm</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Quaternion</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 计算范数平方</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, %1, %1;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %2, %2, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %3, %3, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 %0, %4, %4, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">norm_sq</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">w</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">z</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 快速倒数平方根</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;rsqrt.approx.f32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">inv_norm</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">norm_sq</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// 归一化</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mul.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">w</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">w</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">inv_norm</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mul.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">inv_norm</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mul.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">inv_norm</span><span class="p">));</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;mul.f32 %0, %1, %2;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">inv_norm</span><span class="p">));</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cp">### 8.5.3 视觉SLAM的特征匹配加速</span>
+
+<span class="n">BRIEF描述子的快速汉明距离计算</span><span class="err">：</span>
+
+<span class="err">```</span><span class="n">cuda</span>
+<span class="c1">// 256位BRIEF描述子（8个uint32）</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">BriefDescriptor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
+<span class="p">};</span>
+
+<span class="c1">// 标准汉明距离</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">hamming_distance_standard</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">BriefDescriptor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                        </span><span class="k">const</span><span class="w"> </span><span class="n">BriefDescriptor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">dist</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">__popc</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">^</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// PTX优化版本：向量化加载和并行计算</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">hamming_distance_ptx</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">BriefDescriptor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                                   </span><span class="k">const</span><span class="w"> </span><span class="n">BriefDescriptor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">xor_result</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 展开循环，使用PTX进行XOR和POPC</span>
+<span class="w">    </span><span class="cp">#pragma unroll</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">            </span><span class="s">&quot;xor.b32 %0, %1, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">            </span><span class="s">&quot;popc.b32 %0, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">            </span><span class="s">&quot;add.s32 %3, %3, %0;&quot;</span>
+<span class="w">            </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">xor_result</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;+r&quot;</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+<span class="w">            </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 批量特征匹配内核</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">batch_feature_matching</span><span class="p">(</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">BriefDescriptor</span><span class="o">*</span><span class="w"> </span><span class="n">features1</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n1</span><span class="p">,</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">BriefDescriptor</span><span class="o">*</span><span class="w"> </span><span class="n">features2</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n2</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">matches</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">distances</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">threshold</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">n1</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 加载第一个特征到寄存器</span>
+<span class="w">    </span><span class="n">BriefDescriptor</span><span class="w"> </span><span class="n">feat1</span><span class="p">;</span>
+<span class="w">    </span><span class="cp">#pragma unroll</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;ld.global.u32 %0, [%1];&quot;</span>
+<span class="w">                     </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">feat1</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+<span class="w">                     </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">features1</span><span class="p">[</span><span class="n">idx</span><span class="p">].</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">best_match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">best_dist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">threshold</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 搜索最佳匹配</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n2</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">dist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">xor_val</span><span class="p">,</span><span class="w"> </span><span class="n">popc_val</span><span class="p">;</span>
+
+<span class="w">        </span><span class="cp">#pragma unroll</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">                </span><span class="s">&quot;ld.global.u32 %0, [%3];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">                </span><span class="s">&quot;xor.b32 %0, %0, %2;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">                </span><span class="s">&quot;popc.b32 %1, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">                </span><span class="s">&quot;add.s32 %4, %4, %1;&quot;</span>
+<span class="w">                </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">xor_val</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">popc_val</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;+r&quot;</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+<span class="w">                </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">features2</span><span class="p">[</span><span class="n">j</span><span class="p">].</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">feat1</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+<span class="w">            </span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 更新最佳匹配</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dist</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">best_dist</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">best_dist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dist</span><span class="p">;</span>
+<span class="w">            </span><span class="n">best_match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">j</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">matches</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">best_match</span><span class="p">;</span>
+<span class="w">    </span><span class="n">distances</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">best_dist</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="854">8.5.4 神经网络的自定义激活函数</h3>
+<p>实现高性能的GELU激活函数：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// GELU(x) = x * Φ(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x^3)))</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">gelu_standard</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.7978845608f</span><span class="p">;</span><span class="w">  </span><span class="c1">// sqrt(2/π)</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.044715f</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">arg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c1</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">c2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">x3</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mf">0.5f</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0f</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tanhf</span><span class="p">(</span><span class="n">arg</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="c1">// PTX优化版本</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">gelu_ptx</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 x2, x3, arg, tanh_arg, one_plus_tanh;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x2, %1, %1;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x3, x2, %1;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 arg, 0f3e5ae6d2, x3, %1;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">  </span><span class="c1">// 0.044715 * x^3 + x</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 arg, 0f3f4c422a, arg;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">         </span><span class="c1">// * sqrt(2/π)</span>
+<span class="w">        </span><span class="s">&quot;  tanh.approx.f32 tanh_arg, arg;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">        </span><span class="c1">// 快速tanh</span>
+<span class="w">        </span><span class="s">&quot;  add.f32 one_plus_tanh, 0f3f800000, tanh_arg;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">  </span><span class="c1">// 1 + tanh</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, %1, one_plus_tanh;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, 0f3f000000, %0;</span><span class="se">\n\t</span><span class="s">&quot;</span><span class="w">           </span><span class="c1">// * 0.5</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 向量化GELU（处理float4）</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">float4</span><span class="w"> </span><span class="n">gelu_ptx_v4</span><span class="p">(</span><span class="kt">float4</span><span class="w"> </span><span class="n">input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float4</span><span class="w"> </span><span class="n">output</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;{</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  .reg .f32 x2&lt;4&gt;, x3&lt;4&gt;, arg&lt;4&gt;, tanh_arg&lt;4&gt;, result&lt;4&gt;;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x2[0], %4, %4;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x2[1], %5, %5;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x2[2], %6, %6;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x2[3], %7, %7;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x3[0], x2[0], %4;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x3[1], x2[1], %5;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x3[2], x2[2], %6;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 x3[3], x2[3], %7;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 arg[0], 0f3e5ae6d2, x3[0], %4;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 arg[1], 0f3e5ae6d2, x3[1], %5;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 arg[2], 0f3e5ae6d2, x3[2], %6;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  fma.rn.f32 arg[3], 0f3e5ae6d2, x3[3], %7;</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 arg[0], 0f3f4c422a, arg[0];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 arg[1], 0f3f4c422a, arg[1];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 arg[2], 0f3f4c422a, arg[2];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 arg[3], 0f3f4c422a, arg[3];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  tanh.approx.f32 tanh_arg[0], arg[0];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  tanh.approx.f32 tanh_arg[1], arg[1];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  tanh.approx.f32 tanh_arg[2], arg[2];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  tanh.approx.f32 tanh_arg[3], arg[3];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  add.f32 result[0], 0f3f800000, tanh_arg[0];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  add.f32 result[1], 0f3f800000, tanh_arg[1];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  add.f32 result[2], 0f3f800000, tanh_arg[2];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  add.f32 result[3], 0f3f800000, tanh_arg[3];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 result[0], %4, result[0];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 result[1], %5, result[1];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 result[2], %6, result[2];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 result[3], %7, result[3];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %0, 0f3f000000, result[0];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %1, 0f3f000000, result[1];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %2, 0f3f000000, result[2];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;  mul.f32 %3, 0f3f000000, result[3];</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="s">&quot;}</span><span class="se">\n\t</span><span class="s">&quot;</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">w</span><span class="p">)</span>
+<span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">z</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">w</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">output</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="855">8.5.5 性能对比与分析</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 基准测试内核</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">benchmark_ptx_optimizations</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 计时变量</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 测试标准版本</span>
+<span class="w">    </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clock64</span><span class="p">();</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gelu_standard</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+<span class="w">    </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clock64</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Standard GELU: %llu cycles</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 测试PTX版本</span>
+<span class="w">    </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clock64</span><span class="p">();</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gelu_ptx</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+<span class="w">    </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clock64</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;PTX GELU: %llu cycles</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">output</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result2</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>性能提升分析：</p>
+<ul>
+<li><strong>距离计算</strong>：PTX版本相比标准版本提升约25-30%</li>
+<li><strong>四元数运算</strong>：FMA优化带来15-20%性能提升</li>
+<li><strong>特征匹配</strong>：向量化访存和PTX优化综合提升40-50%</li>
+<li><strong>激活函数</strong>：使用快速近似指令提升20-35%</li>
+</ul>
+<h2 id="_1">本章小结</h2>
+<p>本章深入探讨了PTX内联汇编在CUDA编程中的应用，主要内容包括：</p>
+<ol>
+<li>
+<p><strong>PTX基础知识</strong>：
+   - PTX作为虚拟ISA的设计理念
+   - 基本语法和数据类型系统
+   - 内联汇编的使用方法</p>
+</li>
+<li>
+<p><strong>硬件特性访问</strong>：
+   - 特殊寄存器的直接访问
+   - 性能计数器和计时器的使用
+   - 谓词寄存器的高级操作</p>
+</li>
+<li>
+<p><strong>浮点运算优化</strong>：
+   - 舍入模式的精确控制
+   - 饱和运算和快速近似指令
+   - FP16运算的优化技巧</p>
+</li>
+<li>
+<p><strong>实战案例</strong>：
+   - 自动驾驶场景的距离计算优化
+   - 具身智能的四元数运算加速
+   - 视觉SLAM特征匹配的向量化
+   - 神经网络激活函数的定制实现</p>
+</li>
+</ol>
+<p>关键优化技巧：</p>
+<ul>
+<li>使用FMA指令减少指令数量和提高精度</li>
+<li>向量化load/store减少内存事务</li>
+<li>快速近似指令在精度允许时大幅提升性能</li>
+<li>寄存器级优化减少数据移动开销</li>
+</ul>
+<h2 id="_2">练习题</h2>
+<h3 id="_3">基础题</h3>
+<p><strong>练习8.1</strong>：实现一个使用PTX的向量点积函数</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">dot_product_ptx</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+</code></pre></div>
+
+<p>要求使用FMA指令和向量化加载。</p>
+<details>
+<summary>答案</summary>
+<p>使用PTX实现高效的点积运算，关键在于：</p>
+<ol>
+<li>使用向量化load减少内存访问</li>
+<li>使用FMA指令进行累加</li>
+<li>展开循环提高指令级并行</li>
+<li>处理非对齐的尾部元素</li>
+</ol>
+</details>
+<p><strong>练习8.2</strong>：使用PTX实现一个位反转函数</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">bit_reverse_ptx</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">);</span>
+</code></pre></div>
+
+<details>
+<summary>答案</summary>
+<p>PTX提供了brev指令直接进行位反转：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;brev.b32 %0, %1;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+</code></pre></div>
+
+<p>这比手动位操作快10倍以上。</p>
+</details>
+<p><strong>练习8.3</strong>：实现一个使用特殊寄存器的线程同步计数器</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">get_thread_rank_in_block</span><span class="p">();</span>
+</code></pre></div>
+
+<details>
+<summary>答案</summary>
+<p>结合tid、ntid等特殊寄存器计算线程在块内的线性索引：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">tid</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tid</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ntid</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tid</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ntid</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ntid</span><span class="p">.</span><span class="n">y</span>
+</code></pre></div>
+
+</details>
+<p><strong>练习8.4</strong>：使用PTX实现saturated arithmetic的RGB像素混合</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">uchar3</span><span class="w"> </span><span class="n">blend_pixels_ptx</span><span class="p">(</span><span class="kt">uchar3</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">uchar3</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">alpha</span><span class="p">);</span>
+</code></pre></div>
+
+<details>
+<summary>答案</summary>
+<p>使用饱和加法和乘法指令，避免溢出：</p>
+<ol>
+<li>将alpha转换为定点数</li>
+<li>使用mul.sat和add.sat指令</li>
+<li>处理RGB三个通道</li>
+</ol>
+</details>
+<h3 id="_4">挑战题</h3>
+<p><strong>练习8.5</strong>：设计并实现一个使用PTX的高性能矩阵转置函数，要求：</p>
+<ul>
+<li>支持任意大小矩阵</li>
+<li>使用向量化访存</li>
+<li>避免bank conflict</li>
+<li>性能超过cuBLAS的geam函数</li>
+</ul>
+<details>
+<summary>提示</summary>
+<ol>
+<li>使用共享内存作为中转</li>
+<li>向量化load/store（float4）</li>
+<li>使用padding避免bank conflict</li>
+<li>考虑warp级的协作</li>
+<li>处理非对齐的边界情况</li>
+</ol>
+</details>
+<p><strong>练习8.6</strong>：实现一个自定义的混合精度GEMM内核，要求：</p>
+<ul>
+<li>输入为FP16，累加用FP32</li>
+<li>使用PTX实现核心计算循环</li>
+<li>性能达到理论峰值的80%以上</li>
+</ul>
+<details>
+<summary>提示</summary>
+<ol>
+<li>使用h2f和f2h转换指令</li>
+<li>寄存器分块技术</li>
+<li>双缓冲预取</li>
+<li>FMA指令流水线优化</li>
+<li>考虑Tensor Core的使用（如果硬件支持）</li>
+</ol>
+</details>
+<p><strong>练习8.7</strong>（开放题）：为自动驾驶场景设计一个点云体素化的PTX优化实现：</p>
+<ul>
+<li>输入：N个3D点</li>
+<li>输出：稀疏体素网格</li>
+<li>要求：处理百万级点云，延迟&lt;10ms</li>
+</ul>
+<details>
+<summary>思路</summary>
+<ol>
+<li>空间哈希避免冲突</li>
+<li>原子操作处理并发写入</li>
+<li>向量化坐标转换</li>
+<li>使用位操作编码体素索引</li>
+<li>考虑动态并行处理稀疏区域</li>
+</ol>
+</details>
+<p><strong>练习8.8</strong>（研究题）：探讨PTX优化在不同GPU架构上的可移植性：</p>
+<ul>
+<li>比较Volta、Turing、Ampere架构的差异</li>
+<li>分析哪些PTX优化是架构无关的</li>
+<li>提出一个自适应优化策略</li>
+</ul>
+<details>
+<summary>研究方向</summary>
+<ol>
+<li>指令延迟的架构差异</li>
+<li>新指令集的利用（如Ampere的异步拷贝）</li>
+<li>寄存器文件大小的影响</li>
+<li>缓存层次的变化</li>
+<li>编写架构感知的代码生成器</li>
+</ol>
+</details>
+<h2 id="_5">常见陷阱与错误</h2>
+<h3 id="1">1. 寄存器分配问题</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：过多的输入输出操作数</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="n">个输出</span><span class="p">]</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="n">个输入</span><span class="p">]);</span><span class="w">  </span><span class="c1">// 可能超出限制</span>
+
+<span class="c1">// 正确：使用临时变量减少操作数</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=r&quot;</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">(</span><span class="n">input</span><span class="p">));</span>
+</code></pre></div>
+
+<h3 id="2">2. 内存对齐错误</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：非对齐的向量访问</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;ld.global.v4.f32 {...}, [%0];&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;l&quot;</span><span class="p">(</span><span class="n">unaligned_ptr</span><span class="p">));</span>
+
+<span class="c1">// 正确：检查对齐或使用标量访问</span>
+<span class="k">if</span><span class="w"> </span><span class="p">((</span><span class="kt">uintptr_t</span><span class="p">)</span><span class="n">ptr</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 向量访问</span>
+<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 标量访问</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="3">3. 指令兼容性</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：使用了特定架构的指令</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;wmma.mma.sync.m16n16k16.f32.f16 ...&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// 需要Volta+</span>
+
+<span class="c1">// 正确：检查计算能力</span>
+<span class="cp">#if __CUDA_ARCH__ &gt;= 700</span>
+<span class="w">    </span><span class="c1">// Tensor Core指令</span>
+<span class="cp">#else</span>
+<span class="w">    </span><span class="c1">// fallback实现</span>
+<span class="cp">#endif</span>
+</code></pre></div>
+
+<h3 id="4">4. 破坏寄存器状态</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：没有声明clobber列表</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="p">);</span><span class="w">  </span><span class="c1">// 可能破坏其他变量</span>
+
+<span class="c1">// 正确：声明所有被修改的寄存器</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;memory&quot;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="5">5. 浮点数立即数格式</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：使用十进制浮点数</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.f32 %0, %1, 2.0;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+
+<span class="c1">// 正确：使用十六进制表示</span>
+<span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;add.f32 %0, %1, 0f40000000;&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;=f&quot;</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+</code></pre></div>
+
+<h2 id="_6">最佳实践检查清单</h2>
+<h3 id="ptx">PTX优化决策</h3>
+<ul>
+<li>[ ] 是否真的需要PTX优化？先分析性能瓶颈</li>
+<li>[ ] 是否有更高层的解决方案（如库函数）？</li>
+<li>[ ] PTX代码的可维护性是否可接受？</li>
+<li>[ ] 是否考虑了不同架构的兼容性？</li>
+</ul>
+<h3 id="_7">代码质量</h3>
+<ul>
+<li>[ ] PTX代码是否有充分的注释？</li>
+<li>[ ] 是否提供了标准C++的fallback版本？</li>
+<li>[ ] 是否进行了正确性验证？</li>
+<li>[ ] 是否测试了边界条件？</li>
+</ul>
+<h3 id="_8">性能优化</h3>
+<ul>
+<li>[ ] 是否使用了FMA指令优化计算？</li>
+<li>[ ] 是否利用了向量化load/store？</li>
+<li>[ ] 是否避免了不必要的寄存器移动？</li>
+<li>[ ] 是否考虑了指令级并行？</li>
+</ul>
+<h3 id="_9">架构适配</h3>
+<ul>
+<li>[ ] 是否使用了<code>__CUDA_ARCH__</code>进行条件编译？</li>
+<li>[ ] 是否测试了目标架构的所有变体？</li>
+<li>[ ] 是否考虑了未来架构的兼容性？</li>
+<li>[ ] 是否记录了架构特定的优化？</li>
+</ul>
+<h3 id="_10">调试与测试</h3>
+<ul>
+<li>[ ] 是否可以轻松切换PTX和标准版本？</li>
+<li>[ ] 是否有性能基准测试？</li>
+<li>[ ] 是否验证了数值精度？</li>
+<li>[ ] 是否处理了所有错误情况？</li>
+</ul>
+<h3 id="_11">文档化</h3>
+<ul>
+<li>[ ] 是否说明了PTX优化的原理？</li>
+<li>[ ] 是否记录了性能提升数据？</li>
+<li>[ ] 是否列出了使用限制？</li>
+<li>[ ] 是否提供了使用示例？</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter7.html" class="nav-link prev">← 第7章：原子操作与同步原语</a><a href="chapter9.html" class="nav-link next">第9章：张量核心与混合精度计算 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

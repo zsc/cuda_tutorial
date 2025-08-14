@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第4章：共享内存与Bank Conflict</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="4bank-conflict">第4章：共享内存与Bank Conflict</h1>
+<p>共享内存是GPU上最重要的性能优化手段之一。与全局内存相比，共享内存提供了高达100倍的带宽和10倍更低的延迟。然而，要充分发挥共享内存的性能潜力，必须深入理解其硬件架构，特别是bank conflict机制。本章将深入剖析共享内存的工作原理，掌握bank conflict的检测与规避技术，并通过双缓冲等高级技术实现内核的极致优化。在自动驾驶的实时感知和具身智能的高频控制场景中，这些技术是达到毫秒级响应的关键。</p>
+<h2 id="41">4.1 共享内存架构详解</h2>
+<h3 id="411">4.1.1 硬件组织结构</h3>
+<p>共享内存在物理上被组织为多个独立的存储体（bank），这种设计允许多个线程同时访问不同的bank，实现真正的并行访问。现代GPU（Volta及之后）的共享内存具有以下特征：</p>
+<p><strong>Bank组织方式</strong>：</p>
+<ul>
+<li>32个bank，每个bank宽度为4字节</li>
+<li>连续的32个4字节字被分配到32个不同的bank</li>
+<li>地址到bank的映射：<code>bank_id = (byte_address / 4) % 32</code></li>
+</ul>
+<div class="codehilite"><pre><span></span><code>地址空间布局（以4字节为单位）：
+     Bank0  Bank1  Bank2  ...  Bank31
+Row0:  [0]    [1]    [2]   ...   [31]
+Row1:  [32]   [33]   [34]  ...   [63]
+Row2:  [64]   [65]   [66]  ...   [95]
+...
+</code></pre></div>
+
+<p><strong>访问特性</strong>：</p>
+<ul>
+<li>单周期访问：无conflict时，一个warp的32个线程可在一个周期内完成访问</li>
+<li>广播机制：多个线程读取同一地址时自动广播，不产生conflict</li>
+<li>多播机制：Volta+架构支持同一bank内多个地址的多播</li>
+</ul>
+<h3 id="412">4.1.2 内存容量与配置</h3>
+<p>不同GPU架构的共享内存容量：</p>
+<p>| 架构 | SM总容量 | 每线程块最大 | 可配置性 |</p>
+<table>
+<thead>
+<tr>
+<th>架构</th>
+<th>SM总容量</th>
+<th>每线程块最大</th>
+<th>可配置性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pascal</td>
+<td>64 KB</td>
+<td>48 KB</td>
+<td>固定分配</td>
+</tr>
+<tr>
+<td>Volta/Turing</td>
+<td>96 KB</td>
+<td>64 KB</td>
+<td>L1/共享内存动态配置</td>
+</tr>
+<tr>
+<td>Ampere</td>
+<td>164 KB</td>
+<td>100 KB</td>
+<td>细粒度配置（0-164KB）</td>
+</tr>
+<tr>
+<td>Hopper</td>
+<td>228 KB</td>
+<td>144 KB</td>
+<td>自动管理模式</td>
+</tr>
+</tbody>
+</table>
+<p><strong>动态配置策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 运行时配置</span>
+<span class="n">cudaFuncSetAttribute</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span><span class="w"> </span><span class="n">cudaFuncAttributeMaxDynamicSharedMemorySize</span><span class="p">,</span><span class="w"> </span><span class="n">sharedMemSize</span><span class="p">);</span>
+<span class="n">cudaFuncSetAttribute</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span><span class="w"> </span><span class="n">cudaFuncAttributePreferredSharedMemoryCarveout</span><span class="p">,</span><span class="w"> </span><span class="n">percentage</span><span class="p">);</span>
+
+<span class="c1">// 编译时声明</span>
+<span class="n">__launch_bounds__</span><span class="p">(</span><span class="n">maxThreadsPerBlock</span><span class="p">,</span><span class="w"> </span><span class="n">minBlocksPerSM</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="413">4.1.3 访问延迟与带宽</h3>
+<p>共享内存的性能特征：</p>
+<p><strong>延迟对比</strong>：</p>
+<ul>
+<li>共享内存：约20-30个时钟周期</li>
+<li>L1缓存：约28个时钟周期（命中）</li>
+<li>L2缓存：约200个时钟周期</li>
+<li>全局内存：约300-400个时钟周期</li>
+</ul>
+<p><strong>理论带宽计算</strong>：
+对于V100（1530 MHz，80个SM）：</p>
+<ul>
+<li>每SM带宽 = 32 banks × 4 bytes × 1530 MHz = 195.84 GB/s</li>
+<li>总带宽 = 195.84 GB/s × 80 = 15.67 TB/s</li>
+<li>相比之下，全局内存带宽仅为900 GB/s</li>
+</ul>
+<h3 id="414">4.1.4 原子操作支持</h3>
+<p>共享内存支持完整的原子操作集：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 共享内存原子操作示例</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">counter</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counter</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">32</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">  </span><span class="c1">// 可能导致conflict</span>
+
+<span class="c1">// 优化：使用不同bank</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">counter</span><span class="p">[</span><span class="mi">32</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">32</span><span class="p">];</span><span class="w">  </span><span class="c1">// 每个warp使用不同的行</span>
+<span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counter</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">warpId</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">32</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">  </span><span class="c1">// 无conflict</span>
+</code></pre></div>
+
+<h2 id="42-bank-conflict">4.2 Bank Conflict的本质与检测</h2>
+<h3 id="421-bank-conflict">4.2.1 Bank Conflict的定义</h3>
+<p>Bank conflict发生在一个warp内的多个线程试图访问同一个bank的不同地址时。这会导致访问串行化，严重降低性能。</p>
+<p><strong>Conflict类型</strong>：</p>
+<ol>
+<li><strong>无conflict</strong>：每个线程访问不同的bank</li>
+<li><strong>广播</strong>：多个线程访问相同地址（只读）</li>
+<li><strong>n-way conflict</strong>：n个线程访问同一bank的不同地址</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 示例1：无conflict - 连续访问</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="mi">1024</span><span class="p">];</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span><span class="w">  </span><span class="c1">// 每个线程访问不同bank</span>
+
+<span class="c1">// 示例2：2-way conflict</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">];</span><span class="w">  </span><span class="c1">// 偶数线程访问偶数bank</span>
+
+<span class="c1">// 示例3：32-way conflict（最坏情况）</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">32</span><span class="p">];</span><span class="w">  </span><span class="c1">// 所有线程访问同一bank</span>
+</code></pre></div>
+
+<h3 id="422-conflict">4.2.2 Conflict的性能影响</h3>
+<p>Bank conflict对性能的影响是累乘的：</p>
+<p>| Conflict程度 | 访问周期 | 有效带宽 |</p>
+<table>
+<thead>
+<tr>
+<th>Conflict程度</th>
+<th>访问周期</th>
+<th>有效带宽</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无conflict</td>
+<td>1</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>2-way</td>
+<td>2</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>4-way</td>
+<td>4</td>
+<td>25%</td>
+</tr>
+<tr>
+<td>8-way</td>
+<td>8</td>
+<td>12.5%</td>
+</tr>
+<tr>
+<td>32-way</td>
+<td>32</td>
+<td>3.125%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="423">4.2.3 检测工具与方法</h3>
+<p><strong>使用Nsight Compute检测</strong>：</p>
+<div class="codehilite"><pre><span></span><code>ncu<span class="w"> </span>--metrics<span class="w"> </span>l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,<span class="se">\</span>
+l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum<span class="w"> </span><span class="se">\</span>
+./your_kernel
+</code></pre></div>
+
+<p><strong>代码级检测</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">template</span><span class="o">&lt;</span><span class="n">typename</span><span class="w"> </span><span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">detectBankConflict</span><span class="p">(</span><span class="n">T</span><span class="o">*</span><span class="w"> </span><span class="n">sharedMem</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clock</span><span class="p">();</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sharedMem</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clock</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// 通过时间差判断是否有conflict</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">THRESHOLD</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 可能存在bank conflict</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="424-conflict">4.2.4 常见的Conflict模式</h3>
+<p><strong>跨步访问模式</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Stride = 2: 2-way conflict</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">matrix</span><span class="p">[</span><span class="mi">32</span><span class="p">][</span><span class="mi">33</span><span class="p">];</span><span class="w">  </span><span class="c1">// 注意：33而不是32</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">matrix</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">];</span>
+
+<span class="c1">// Stride = 8: 8-way conflict  </span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">matrix</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">8</span><span class="p">];</span>
+</code></pre></div>
+
+<p><strong>矩阵转置模式</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 原始版本：严重conflict</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">tile</span><span class="p">[</span><span class="mi">32</span><span class="p">][</span><span class="mi">32</span><span class="p">];</span>
+<span class="c1">// 读取时列优先，写入时行优先</span>
+<span class="n">tile</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[...];</span><span class="w">  </span>
+<span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="n">output</span><span class="p">[...]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tile</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">];</span><span class="w">  </span><span class="c1">// 32-way conflict!</span>
+</code></pre></div>
+
+<p><strong>归约操作模式</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 树形归约中的conflict</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">sdata</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="c1">// Stride从大到小变化，后期会产生conflict</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="o">/</span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">sdata</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">sdata</span><span class="p">[</span><span class="n">tid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="p">];</span><span class="w">  </span><span class="c1">// s较小时产生conflict</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="43-paddingswizzlingpermutation">4.3 规避策略：Padding、Swizzling与Permutation</h2>
+<h3 id="431-padding">4.3.1 Padding技术</h3>
+<p>Padding是最简单有效的conflict规避方法，通过添加额外的列来改变bank映射：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 原始：32-way conflict in transpose</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">tile</span><span class="p">[</span><span class="mi">32</span><span class="p">][</span><span class="mi">32</span><span class="p">];</span><span class="w">  </span>
+
+<span class="c1">// Padding：消除conflict</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">tile</span><span class="p">[</span><span class="mi">32</span><span class="p">][</span><span class="mi">33</span><span class="p">];</span><span class="w">  </span><span class="c1">// 添加1列padding</span>
+
+<span class="c1">// 通用padding公式</span>
+<span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">TILE_SIZE</span><span class="o">&gt;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">SharedMemoryPadded</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="n">constexpr</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PADDING</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">TILE_SIZE</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">TILE_SIZE</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">PADDING</span><span class="p">];</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>Padding开销分析</strong>：</p>
+<ul>
+<li>空间开销：(33-32)/32 = 3.125%</li>
+<li>完全消除conflict，性能提升可达32倍</li>
+</ul>
+<h3 id="432-swizzling">4.3.2 Swizzling技术</h3>
+<p>Swizzling通过重新排列数据布局来避免conflict，不增加额外存储：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// XOR swizzling示例</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">swizzle</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">mask</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x7</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">^</span><span class="w"> </span><span class="p">((</span><span class="n">y</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">mask</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">tile</span><span class="p">[</span><span class="mi">32</span><span class="p">][</span><span class="mi">32</span><span class="p">];</span>
+<span class="c1">// 使用swizzled索引</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">swizzled_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">swizzle</span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tile</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">][</span><span class="n">swizzled_x</span><span class="p">];</span>
+</code></pre></div>
+
+<p><strong>高级Swizzling模式</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Diagonal swizzling</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">diagonalSwizzle</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">width</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// Block-cyclic swizzling  </span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">blockCyclicSwizzle</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">blockSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">blockX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">blockY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">inBlockX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">inBlockY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">blockX</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">blockSize</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">inBlockX</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">blockY</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">blockSize</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="433-permutation">4.3.3 Permutation策略</h3>
+<p>Permutation通过重新排列线程访问顺序来避免conflict：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 线程重映射</span>
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">permuteThread</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">numThreads</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 位反转permutation</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">bits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__ffs</span><span class="p">(</span><span class="n">numThreads</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">bits</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tid</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">i</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">result</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="p">(</span><span class="n">bits</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">i</span><span class="p">));</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 使用permutation访问</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">permuted_tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">permuteThread</span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sharedMem</span><span class="p">[</span><span class="n">permuted_tid</span><span class="p">];</span>
+</code></pre></div>
+
+<h3 id="434">4.3.4 策略选择指南</h3>
+<p>| 场景 | 推荐策略 | 理由 |</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐策略</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>矩阵转置</td>
+<td>Padding</td>
+<td>简单有效，开销小</td>
+</tr>
+<tr>
+<td>卷积/Stencil</td>
+<td>Swizzling</td>
+<td>保持局部性，无空间开销</td>
+</tr>
+<tr>
+<td>归约操作</td>
+<td>Permutation</td>
+<td>动态调整访问模式</td>
+</tr>
+<tr>
+<td>稀疏访问</td>
+<td>混合策略</td>
+<td>根据稀疏模式定制</td>
+</tr>
+</tbody>
+</table>
+<h2 id="44">4.4 双缓冲与流水线技术</h2>
+<h3 id="441">4.4.1 双缓冲原理</h3>
+<p>双缓冲技术通过重叠计算与数据传输来隐藏内存延迟：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">TILE_SIZE</span><span class="o">&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">matmulDoubleBuffer</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 双缓冲共享内存</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span><span class="w">  </span><span class="c1">// +1 for padding</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">ty</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">bx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 预加载第一个tile</span>
+<span class="w">    </span><span class="n">As</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">[...];</span>
+<span class="w">    </span><span class="n">Bs</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">[...];</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="o">/</span><span class="n">TILE_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 异步加载下一个tile到另一个buffer</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">next_buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">buffer</span><span class="p">;</span>
+<span class="w">        </span><span class="n">As</span><span class="p">[</span><span class="n">next_buffer</span><span class="p">][</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">[...];</span><span class="w">  </span><span class="c1">// tile+1的数据</span>
+<span class="w">        </span><span class="n">Bs</span><span class="p">[</span><span class="n">next_buffer</span><span class="p">][</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">[...];</span>
+
+<span class="w">        </span><span class="c1">// 同时计算当前buffer</span>
+<span class="w">        </span><span class="cp">#pragma unroll</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TILE_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">ty</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="n">tx</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">        </span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">next_buffer</span><span class="p">;</span><span class="w">  </span><span class="c1">// 切换buffer</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 处理最后一个tile</span>
+<span class="w">    </span><span class="cp">#pragma unroll</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TILE_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">ty</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="n">tx</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">C</span><span class="p">[...]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="442">4.4.2 软件流水线优化</h3>
+<p>软件流水线将循环展开为预载、稳态和收尾三个阶段：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 三阶段流水线</span>
+<span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">STAGES</span><span class="o">&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">pipelinedKernel</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">buffer</span><span class="p">[</span><span class="n">STAGES</span><span class="p">][</span><span class="n">BLOCK_SIZE</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// Prologue: 填充流水线</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">STAGES</span><span class="mi">-1</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">buffer</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="n">s</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// Steady state: 主循环</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">STAGES</span><span class="mi">-1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="o">/</span><span class="n">BLOCK_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">curr_stage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">STAGES</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">next_stage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">STAGES</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 加载下一阶段数据</span>
+<span class="w">        </span><span class="n">buffer</span><span class="p">[</span><span class="n">next_stage</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span>
+
+<span class="w">        </span><span class="c1">// 处理当前阶段</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">compute</span><span class="p">(</span><span class="n">buffer</span><span class="p">[</span><span class="n">curr_stage</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]);</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[(</span><span class="n">i</span><span class="o">-</span><span class="n">STAGES</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Epilogue: 清空流水线</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">STAGES</span><span class="mi">-1</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">stage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="o">/</span><span class="n">BLOCK_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">STAGES</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">compute</span><span class="p">(</span><span class="n">buffer</span><span class="p">[</span><span class="n">stage</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]);</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[...]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="443-ampere">4.4.3 异步拷贝与流水线（Ampere+）</h3>
+<p>Ampere架构引入了异步拷贝指令，实现真正的硬件级流水线：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用cuda::pipeline (C++20)</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cuda/pipeline&gt;</span>
+
+<span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="o">&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">asyncPipelineKernel</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">smem</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">BLOCK_SIZE</span><span class="p">];</span>
+
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">pipe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cuda</span><span class="o">::</span><span class="n">make_pipeline</span><span class="p">();</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">thread_role</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cuda</span><span class="o">::</span><span class="n">pipeline_role</span><span class="o">::</span><span class="n">producer</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 异步加载第一个块</span>
+<span class="w">    </span><span class="n">cuda</span><span class="o">::</span><span class="n">memcpy_async</span><span class="p">(</span><span class="n">smem</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">pipe</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pipe</span><span class="p">.</span><span class="n">producer_commit</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="o">/</span><span class="n">BLOCK_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">curr_buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">next_buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 异步加载下一块</span>
+<span class="w">        </span><span class="n">cuda</span><span class="o">::</span><span class="n">memcpy_async</span><span class="p">(</span><span class="n">smem</span><span class="p">[</span><span class="n">next_buf</span><span class="p">],</span><span class="w"> </span>
+<span class="w">                          </span><span class="n">input</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                          </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">pipe</span><span class="p">);</span>
+<span class="w">        </span><span class="n">pipe</span><span class="p">.</span><span class="n">producer_commit</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// 等待当前块就绪</span>
+<span class="w">        </span><span class="n">pipe</span><span class="p">.</span><span class="n">consumer_wait</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// 处理当前块</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">process</span><span class="p">(</span><span class="n">smem</span><span class="p">[</span><span class="n">curr_buf</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]);</span>
+<span class="w">        </span><span class="n">output</span><span class="p">[(</span><span class="n">i</span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+
+<span class="w">        </span><span class="n">pipe</span><span class="p">.</span><span class="n">consumer_release</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 处理最后一块</span>
+<span class="w">    </span><span class="n">pipe</span><span class="p">.</span><span class="n">consumer_wait</span><span class="p">();</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">process</span><span class="p">(</span><span class="n">smem</span><span class="p">[(</span><span class="n">N</span><span class="o">/</span><span class="n">BLOCK_SIZE</span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]);</span>
+<span class="w">    </span><span class="n">output</span><span class="p">[(</span><span class="n">N</span><span class="o">/</span><span class="n">BLOCK_SIZE</span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BLOCK_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="w">    </span><span class="n">pipe</span><span class="p">.</span><span class="n">consumer_release</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="444">4.4.4 循环展开与寄存器缓存</h3>
+<p>结合循环展开和寄存器缓存进一步优化：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">TILE_SIZE</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="o">&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">optimizedGEMM</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">TILE_SIZE</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">TILE_SIZE</span><span class="p">][</span><span class="n">TILE_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 寄存器缓存</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">a_reg</span><span class="p">[</span><span class="n">VECTOR_SIZE</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">b_reg</span><span class="p">[</span><span class="n">VECTOR_SIZE</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">c_reg</span><span class="p">[</span><span class="n">VECTOR_SIZE</span><span class="p">][</span><span class="n">VECTOR_SIZE</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">ty</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="o">/</span><span class="n">TILE_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 协作加载到共享内存</span>
+<span class="w">        </span><span class="n">As</span><span class="p">[</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">[...];</span>
+<span class="w">        </span><span class="n">Bs</span><span class="p">[</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">[...];</span>
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// 向量化计算，减少共享内存访问</span>
+<span class="w">        </span><span class="cp">#pragma unroll</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TILE_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// 加载到寄存器</span>
+<span class="w">            </span><span class="cp">#pragma unroll</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">v</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">a_reg</span><span class="p">[</span><span class="n">v</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">ty</span><span class="p">][</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">v</span><span class="p">];</span>
+<span class="w">                </span><span class="n">b_reg</span><span class="p">[</span><span class="n">v</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">v</span><span class="p">][</span><span class="n">tx</span><span class="p">];</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="c1">// 寄存器级计算</span>
+<span class="w">            </span><span class="cp">#pragma unroll</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="cp">#pragma unroll</span>
+<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">c_reg</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">a_reg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">b_reg</span><span class="p">[</span><span class="n">j</span><span class="p">];</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 写回结果</span>
+<span class="w">    </span><span class="cp">#pragma unroll</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="cp">#pragma unroll</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">VECTOR_SIZE</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">C</span><span class="p">[...]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c_reg</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="45">4.5 案例：高性能矩阵乘法的共享内存优化</h2>
+<h3 id="451">4.5.1 问题分析</h3>
+<p>矩阵乘法是评估GPU性能的经典基准，其优化涉及共享内存使用的各个方面。对于自动驾驶中的神经网络推理，GEMM操作占据了70%以上的计算时间。</p>
+<p><strong>性能目标</strong>：</p>
+<ul>
+<li>达到理论峰值性能的90%以上</li>
+<li>在V100上实现 &gt; 14 TFLOPS（FP32）</li>
+<li>支持非方阵和小批量场景</li>
+</ul>
+<h3 id="452">4.5.2 优化版本演进</h3>
+<p><strong>版本1：朴素共享内存</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 基础版本：~30% 峰值性能</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">gemmV1</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">K</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="mi">16</span><span class="p">][</span><span class="mi">16</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="mi">16</span><span class="p">][</span><span class="mi">16</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">bx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">ty</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">K</span><span class="o">/</span><span class="mi">16</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">As</span><span class="p">[</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">[(</span><span class="n">by</span><span class="o">*</span><span class="mi">16</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ty</span><span class="p">)</span><span class="o">*</span><span class="n">K</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tile</span><span class="o">*</span><span class="mi">16</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tx</span><span class="p">];</span>
+<span class="w">        </span><span class="n">Bs</span><span class="p">[</span><span class="n">ty</span><span class="p">][</span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">[(</span><span class="n">tile</span><span class="o">*</span><span class="mi">16</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ty</span><span class="p">)</span><span class="o">*</span><span class="n">N</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bx</span><span class="o">*</span><span class="mi">16</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tx</span><span class="p">];</span>
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">ty</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">tx</span><span class="p">];</span><span class="w">  </span><span class="c1">// Bank conflict!</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">C</span><span class="p">[(</span><span class="n">by</span><span class="o">*</span><span class="mi">16</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ty</span><span class="p">)</span><span class="o">*</span><span class="n">N</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bx</span><span class="o">*</span><span class="mi">16</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>版本2：Padding消除conflict</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Padding版本：~60% 峰值性能</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">gemmV2</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">K</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="mi">16</span><span class="p">][</span><span class="mi">17</span><span class="p">];</span><span class="w">  </span><span class="c1">// Padding</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="mi">16</span><span class="p">][</span><span class="mi">17</span><span class="p">];</span><span class="w">  </span><span class="c1">// Padding</span>
+<span class="w">    </span><span class="c1">// ... 其余代码相同</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>版本3：向量化访存 + 双缓冲</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 高性能版本：~85% 峰值性能</span>
+<span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">BM</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">BN</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">BK</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">TM</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">TN</span><span class="o">&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">gemmV3</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">K</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">BK</span><span class="p">][</span><span class="n">BM</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span><span class="w">  </span><span class="c1">// 双缓冲 + padding</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">BK</span><span class="p">][</span><span class="n">BN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 每个线程负责TM x TN的输出tile</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">c_reg</span><span class="p">[</span><span class="n">TM</span><span class="p">][</span><span class="n">TN</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">a_reg</span><span class="p">[</span><span class="n">TM</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">b_reg</span><span class="p">[</span><span class="n">TN</span><span class="p">];</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 预加载第一个tile (向量化)</span>
+<span class="w">    </span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">As_ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">*&gt;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">As</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]);</span>
+<span class="w">    </span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">Bs_ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">*&gt;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">Bs</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]);</span>
+<span class="w">    </span><span class="c1">// ... 向量化加载</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">K</span><span class="o">/</span><span class="n">BK</span><span class="p">;</span><span class="w"> </span><span class="n">tile</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">next_buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">buffer</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 异步加载下一个tile</span>
+<span class="w">        </span><span class="c1">// ...</span>
+
+<span class="w">        </span><span class="c1">// 计算当前tile</span>
+<span class="w">        </span><span class="cp">#pragma unroll</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">BK</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// 加载到寄存器</span>
+<span class="w">            </span><span class="cp">#pragma unroll</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TM</span><span class="p">;</span><span class="w"> </span><span class="n">m</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">a_reg</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">k</span><span class="p">][...];</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="cp">#pragma unroll</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TN</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">b_reg</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">buffer</span><span class="p">][</span><span class="n">k</span><span class="p">][...];</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="c1">// 外积更新</span>
+<span class="w">            </span><span class="cp">#pragma unroll</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TM</span><span class="p">;</span><span class="w"> </span><span class="n">m</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="cp">#pragma unroll</span>
+<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TN</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">c_reg</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">a_reg</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">b_reg</span><span class="p">[</span><span class="n">n</span><span class="p">];</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="nf">__syncthreads</span><span class="p">();</span>
+<span class="w">        </span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">next_buffer</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 写回结果</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="453">4.5.3 性能分析与调优</h3>
+<p><strong>Occupancy分析</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 计算最优配置</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">sharedMemPerBlock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">BM</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BK</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">+</span><span class="w">  </span><span class="c1">// As双缓冲</span>
+<span class="w">                        </span><span class="p">(</span><span class="n">BN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">BK</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">   </span><span class="c1">// Bs双缓冲</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">maxBlocksPerSM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min</span><span class="p">(</span>
+<span class="w">    </span><span class="n">SM_SHARED_MEM_SIZE</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sharedMemPerBlock</span><span class="p">,</span>
+<span class="w">    </span><span class="n">MAX_THREADS_PER_SM</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">y</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="c1">// 目标：maxBlocksPerSM &gt;= 2 for hiding latency</span>
+</code></pre></div>
+
+<p><strong>带宽利用率计算</strong>：</p>
+<div class="codehilite"><pre><span></span><code>有效带宽 = (2 <span class="gs">* M *</span> N <span class="gs">* K *</span> sizeof(float)) / kernel_time
+带宽效率 = 有效带宽 / 理论带宽
+
+目标：
+
+<span class="k">-</span> 共享内存带宽效率 &gt; 80%
+<span class="k">-</span> 全局内存带宽效率 &gt; 70%
+</code></pre></div>
+
+<h3 id="454">4.5.4 自动驾驶场景优化</h3>
+<p>在自动驾驶的实时推理中，矩阵乘法常见于：</p>
+<ol>
+<li>点云特征提取（PointPillars）</li>
+<li>多头注意力计算（Transformer）</li>
+<li>特征金字塔融合（FPN）</li>
+</ol>
+<p><strong>小批量优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 批量为1的特殊优化</span>
+<span class="n">template</span><span class="o">&lt;&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">gemmBatch1</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">K</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 使用持久化内核，避免重复加载权重</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs_persistent</span><span class="p">[</span><span class="n">WEIGHT_TILE_SIZE</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 权重只加载一次</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Bs_persistent</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">[...];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// 流式处理输入</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">row</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span><span class="w"> </span><span class="n">row</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">M</span><span class="p">;</span><span class="w"> </span><span class="n">row</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nb">gridDim</span><span class="p">.</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 处理一行输出</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>动态形状适配</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 处理非对齐尺寸</span>
+<span class="n">template</span><span class="o">&lt;</span><span class="kt">int</span><span class="w"> </span><span class="n">TILE_M</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">TILE_N</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">TILE_K</span><span class="o">&gt;</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">gemmDynamic</span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">C</span><span class="p">,</span><span class="w"> </span>
+<span class="w">                            </span><span class="kt">int</span><span class="w"> </span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">K</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 边界检查版本</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">As</span><span class="p">[</span><span class="n">TILE_M</span><span class="p">][</span><span class="n">TILE_K</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">Bs</span><span class="p">[</span><span class="n">TILE_K</span><span class="p">][</span><span class="n">TILE_N</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 计算有效加载范围</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">valid_m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min</span><span class="p">(</span><span class="n">TILE_M</span><span class="p">,</span><span class="w"> </span><span class="n">M</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">TILE_M</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">valid_n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min</span><span class="p">(</span><span class="n">TILE_N</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">TILE_N</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 带边界检查的加载</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">valid_m</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">TILE_K</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">As</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">[...];</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">As</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">y</span><span class="p">][</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// ... 类似处理Bs和计算逻辑</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="455">4.5.5 性能基准与对比</h3>
+<p><strong>不同优化级别的性能对比</strong>（V100，FP32）：</p>
+<p>| 优化级别 | 性能(TFLOPS) | 峰值占比 | 主要瓶颈 |</p>
+<table>
+<thead>
+<tr>
+<th>优化级别</th>
+<th>性能(TFLOPS)</th>
+<th>峰值占比</th>
+<th>主要瓶颈</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cublas</td>
+<td>15.6</td>
+<td>99%</td>
+<td>-</td>
+</tr>
+<tr>
+<td>本章优化版本</td>
+<td>14.2</td>
+<td>91%</td>
+<td>寄存器压力</td>
+</tr>
+<tr>
+<td>双缓冲+Padding</td>
+<td>10.8</td>
+<td>69%</td>
+<td>同步开销</td>
+</tr>
+<tr>
+<td>仅Padding</td>
+<td>8.5</td>
+<td>54%</td>
+<td>Bank conflict</td>
+</tr>
+<tr>
+<td>朴素共享内存</td>
+<td>4.7</td>
+<td>30%</td>
+<td>严重conflict</td>
+</tr>
+<tr>
+<td>无共享内存</td>
+<td>1.2</td>
+<td>8%</td>
+<td>全局内存带宽</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">本章小结</h2>
+<p>本章深入探讨了GPU共享内存的架构和优化技术，掌握了以下关键概念：</p>
+<ol>
+<li><strong>共享内存架构</strong>：32个bank的组织方式，地址映射规则，以及不同GPU架构的容量配置</li>
+<li><strong>Bank Conflict机制</strong>：conflict的产生原因、性能影响和检测方法</li>
+<li><strong>规避策略</strong>：Padding、Swizzling和Permutation三种主要技术的原理和应用场景</li>
+<li><strong>双缓冲技术</strong>：通过计算与数据传输的重叠实现延迟隐藏</li>
+<li><strong>实战优化</strong>：从30%到90%峰值性能的矩阵乘法优化历程</li>
+</ol>
+<p><strong>关键公式回顾</strong>：</p>
+<ul>
+<li>Bank映射：<code>bank_id = (byte_address / 4) % 32</code></li>
+<li>Padding计算：<code>padding = (TILE_SIZE % 32 == 0) ? 1 : 0</code></li>
+<li>有效带宽：<code>BW_eff = (bytes_accessed / kernel_time)</code></li>
+<li>Occupancy：<code>occ = active_warps / max_warps_per_SM</code></li>
+</ul>
+<h2 id="_2">练习题</h2>
+<h3 id="_3">基础题</h3>
+<ol>
+<li><strong>Bank Conflict识别</strong>
+分析以下代码片段，判断是否存在bank conflict及其类型：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="c1">// Case A</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span>
+<span class="c1">// Case B  </span>
+<span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">];</span>
+<span class="c1">// Case C</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">32</span><span class="p">];</span>
+<span class="c1">// Case D</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span><span class="w">  </span><span class="c1">// 所有线程读取</span>
+</code></pre></div>
+
+<details>
+<summary>答案</summary>
+<ul>
+<li>Case A：无conflict，连续访问不同bank</li>
+<li>Case B：2-way conflict，偶数线程访问偶数bank</li>
+<li>Case C：32-way conflict，所有线程访问同一bank</li>
+<li>Case D：无conflict，广播机制自动处理</li>
+</ul>
+</details>
+<ol start="2">
+<li><strong>Padding计算</strong>
+给定一个32×32的共享内存数组用于矩阵转置，计算需要的padding大小并解释原因。</li>
+</ol>
+<p><strong>提示</strong>：考虑转置操作中的访问模式</p>
+<details>
+<summary>答案</summary>
+<p>需要padding 1列，变为32×33。原因：转置时列访问变为行访问，stride=32会导致所有线程访问同一bank。添加1列padding后，stride变为33，错开了bank映射。</p>
+</details>
+<ol start="3">
+<li><strong>共享内存容量规划</strong>
+在Ampere架构(164KB共享内存/SM)上，设计一个GEMM kernel的共享内存分配方案，要求：</li>
+</ol>
+<ul>
+<li>Block size: 128×128</li>
+<li>双缓冲</li>
+<li>目标occupancy ≥ 50%</li>
+</ul>
+<p><strong>提示</strong>：计算每个block需要的共享内存，确保至少2个block能同时运行</p>
+<details>
+<summary>答案</summary>
+<p>每个tile需要：(128×8 + 8×128) × 4 bytes × 2(双缓冲) = 16KB
+添加padding：约16.5KB
+每个block总需求：约33KB
+164KB可容纳：164/33 ≈ 4个blocks，满足occupancy要求</p>
+</details>
+<h3 id="_4">挑战题</h3>
+<ol start="4">
+<li><strong>Swizzling函数设计</strong>
+设计一个swizzling函数，使得32×32矩阵转置时无bank conflict且不使用额外存储。</li>
+</ol>
+<p><strong>提示</strong>：使用XOR操作改变索引映射</p>
+<details>
+<summary>答案</summary>
+<div class="codehilite"><pre><span></span><code>__device__ int swizzle(int x, int y) {
+    // XOR低5位，实现bank交错
+    return x ^ ((y &amp; 0x1F) &gt;&gt; 2);
+}
+
+使用方式：
+tile[threadIdx.y][swizzle(threadIdx.x, threadIdx.y)] = input[...];
+</code></pre></div>
+
+<p>关键：利用XOR操作使相邻warp的线程访问不同bank组。</p>
+</details>
+<ol start="5">
+<li><strong>性能瓶颈分析</strong>
+某GEMM kernel报告：</li>
+</ol>
+<ul>
+<li>计算吞吐：8 TFLOPS</li>
+<li>共享内存带宽利用率：45%</li>
+<li>Occupancy：75%</li>
+<li>Bank conflict率：平均4-way</li>
+</ul>
+<p>请分析性能瓶颈并提出优化方案。</p>
+<p><strong>提示</strong>：从多个维度分析瓶颈来源</p>
+<details>
+<summary>答案</summary>
+<p>瓶颈分析：</p>
+<ol>
+<li>主要瓶颈是bank conflict（4-way导致带宽降至25%）</li>
+<li>共享内存带宽利用率低（45%）印证了conflict问题</li>
+</ol>
+<p>优化方案：</p>
+<ol>
+<li>添加padding消除conflict</li>
+<li>使用swizzling技术</li>
+<li>调整tile大小避免conflict pattern</li>
+<li>增加寄存器缓存减少共享内存访问</li>
+</ol>
+<p>预期改进：消除conflict后，带宽利用率可达80%+，性能提升约2倍。</p>
+</details>
+<ol start="6">
+<li><strong>双缓冲流水线设计</strong>
+为一个Stencil计算（5-point）设计双缓冲方案，要求：</li>
+</ol>
+<ul>
+<li>输入：1D数组，长度N</li>
+<li>每个点需要左右各2个邻居</li>
+<li>最大化计算与加载的重叠</li>
+</ul>
+<p><strong>提示</strong>：考虑halo区域的处理</p>
+<details>
+<summary>答案</summary>
+<p>设计要点：</p>
+<ol>
+<li>共享内存：2个buffer，每个BLOCK_SIZE+4（halo）</li>
+<li>流水线阶段：
+   - 预加载buffer 0
+   - 循环：加载buffer (i+1)%2，计算buffer i%2
+   - 收尾：处理最后buffer</li>
+<li>Halo处理：每个buffer多加载4个元素</li>
+<li>同步点：加载后、计算前各一个syncthreads</li>
+</ol>
+<p>关键优化：使用异步内存传输（Ampere+）进一步隐藏延迟。</p>
+</details>
+<ol start="7">
+<li><strong>混合精度共享内存优化</strong>
+设计一个FP16 GEMM kernel的共享内存布局，要求：</li>
+</ol>
+<ul>
+<li>利用Tensor Core</li>
+<li>最小化bank conflict</li>
+<li>支持FP32累加器</li>
+</ul>
+<p><strong>提示</strong>：考虑FP16的bank宽度和Tensor Core的访问模式</p>
+<details>
+<summary>答案</summary>
+<p>布局设计：</p>
+<ol>
+<li>FP16存储：每个bank可存2个FP16值</li>
+<li>Fragment布局：16×16×16 for Tensor Core</li>
+<li>Swizzling：每8行做一次permutation</li>
+<li>累加器：使用寄存器存储FP32结果</li>
+</ol>
+<p>关键点：</p>
+<ul>
+<li>Bank conflict pattern与FP32不同</li>
+<li>需要考虑wmma的访问对齐</li>
+<li>使用ldmatrix指令优化加载</li>
+</ul>
+</details>
+<ol start="8">
+<li><strong>动态共享内存分配策略</strong>
+设计一个自适应的共享内存分配策略，根据问题规模动态调整tile大小和buffer数量。</li>
+</ol>
+<p><strong>提示</strong>：建立性能模型，考虑occupancy和data reuse的平衡</p>
+<details>
+<summary>答案</summary>
+<p>策略框架：</p>
+<ol>
+<li>性能模型：T = T_compute + T_memory - T_overlap</li>
+<li>约束条件：
+   - 共享内存限制：tile_size² × buffers × 4 ≤ SM_capacity
+   - Occupancy要求：blocks_per_SM ≥ 2</li>
+<li>优化目标：maximize (计算强度 × occupancy)</li>
+<li>实现：
+   - 小矩阵：大tile，单缓冲
+   - 中矩阵：中tile，双缓冲
+   - 大矩阵：小tile，三缓冲</li>
+</ol>
+<p>决策树示例：</p>
+<div class="codehilite"><pre><span></span><code>if (M*N*K &lt; threshold_small)
+    use_config(128×128, single_buffer);
+else if (M*N*K &lt; threshold_medium)
+    use_config(64×64, double_buffer);
+else
+    use_config(32×32, triple_buffer);
+</code></pre></div>
+
+</details>
+<h2 id="gotchas">常见陷阱与错误（Gotchas）</h2>
+<h3 id="1-bank-conflict">1. 隐式的Bank Conflict</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：结构体大小导致conflict</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Vec3</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span><span class="w"> </span><span class="p">};</span><span class="w">  </span><span class="c1">// 12 bytes</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="n">Vec3</span><span class="w"> </span><span class="n">vectors</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="c1">// 访问vectors[threadIdx.x]会产生conflict！</span>
+
+<span class="c1">// 正确：padding到16字节</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Vec4</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">;</span><span class="w"> </span><span class="p">};</span><span class="w">  </span><span class="c1">// 16 bytes</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="n">Vec4</span><span class="w"> </span><span class="n">vectors</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+</code></pre></div>
+
+<h3 id="2">2. 动态索引的陷阱</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 危险：动态索引可能产生不可预测的conflict</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="mi">1024</span><span class="p">];</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">some_computation</span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span><span class="w">  </span><span class="c1">// 编译器无法优化</span>
+
+<span class="c1">// 改进：使用静态模式或确保无conflict的映射</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">offset</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">MASK</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3-false-sharing">3. False Sharing</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 问题：不同warp写入相邻地址</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">counters</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counters</span><span class="p">[</span><span class="n">warpId</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">  </span><span class="c1">// False sharing!</span>
+
+<span class="c1">// 解决：padding避免cache line竞争</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">counters</span><span class="p">[</span><span class="mi">32</span><span class="p">][</span><span class="mi">8</span><span class="p">];</span><span class="w">  </span><span class="c1">// 每个counter占用32字节</span>
+<span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counters</span><span class="p">[</span><span class="n">warpId</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="4">4. 同步错误</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：条件同步导致死锁</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 处理数据</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span><span class="w">  </span><span class="c1">// 死锁！只有部分线程到达</span>
+<span class="p">}</span>
+
+<span class="c1">// 正确：所有线程都要经过同步点</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 处理数据</span>
+<span class="p">}</span>
+<span class="nf">__syncthreads</span><span class="p">();</span><span class="w">  </span><span class="c1">// 所有线程都会到达</span>
+</code></pre></div>
+
+<h3 id="5">5. 共享内存初始化</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 错误：未初始化的共享内存包含垃圾值</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">sdata</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sdata</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span><span class="w">  </span><span class="c1">// 垃圾值！</span>
+
+<span class="c1">// 正确：显式初始化</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">sdata</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="n">sdata</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>
+<span class="nf">__syncthreads</span><span class="p">();</span>
+</code></pre></div>
+
+<h2 id="_5">最佳实践检查清单</h2>
+<h3 id="_6">设计阶段</h3>
+<ul>
+<li>[ ] 计算共享内存需求，确保不超过硬件限制</li>
+<li>[ ] 评估bank conflict风险，选择合适的规避策略</li>
+<li>[ ] 规划数据布局，考虑padding和对齐</li>
+<li>[ ] 设计同步策略，避免过度同步</li>
+<li>[ ] 考虑与L1缓存的配置权衡</li>
+</ul>
+<h3 id="_7">实现阶段</h3>
+<ul>
+<li>[ ] 使用模板参数使tile大小可配置</li>
+<li>[ ] 实现边界检查处理非对齐尺寸</li>
+<li>[ ] 添加padding消除bank conflict</li>
+<li>[ ] 使用pragma unroll优化内层循环</li>
+<li>[ ] 实现双缓冲隐藏内存延迟</li>
+</ul>
+<h3 id="_8">优化阶段</h3>
+<ul>
+<li>[ ] 使用Nsight Compute分析bank conflict</li>
+<li>[ ] 测量共享内存带宽利用率</li>
+<li>[ ] 评估occupancy与共享内存使用的平衡</li>
+<li>[ ] 尝试不同的swizzling模式</li>
+<li>[ ] 考虑寄存器缓存减少共享内存压力</li>
+</ul>
+<h3 id="_9">验证阶段</h3>
+<ul>
+<li>[ ] 检查所有共享内存访问的边界</li>
+<li>[ ] 验证同步点的正确性</li>
+<li>[ ] 测试不同问题规模的性能</li>
+<li>[ ] 确认无race condition</li>
+<li>[ ] 对比优化前后的性能指标</li>
+</ul>
+<h3 id="_10">部署阶段</h3>
+<ul>
+<li>[ ] 为不同GPU架构提供优化参数</li>
+<li>[ ] 实现自动tuning机制</li>
+<li>[ ] 添加性能监控和日志</li>
+<li>[ ] 编写使用文档和注意事项</li>
+<li>[ ] 设置合理的fallback策略</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter3.html" class="nav-link prev">← 第3章：全局内存优化策略</a><a href="chapter5.html" class="nav-link next">第5章：寄存器优化与常量内存 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

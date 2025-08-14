@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第11章：激光雷达点云处理加速</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">CUDA 高性能编程实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章：CUDA硬件架构深度剖析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章：CUDA编程模型与执行模型</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章：全局内存优化策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章：共享内存与Bank Conflict</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章：寄存器优化与常量内存</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章：Warp级编程与协作组</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章：原子操作与同步原语</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章：PTX内联与底层优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章：张量核心与混合精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章：CUTLASS深度解析</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章：激光雷达点云处理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第12章：多传感器融合的并行化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter13.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第13章：实时语义分割与实例分割</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter14.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第14章：路径规划与轨迹优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter15.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第15章：视觉SLAM的GPU加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter16.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第16章：机械臂运动规划</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter17.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第17章：强化学习推理加速</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter18.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第18章：大规模点云重建与网格化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter19.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第19章：多GPU编程与扩展</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter20.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第20章：CUDA Graph与内核融合</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter21.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第21章：嵌入式GPU开发（Jetson）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter22.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第22章：稀疏计算与动态稀疏</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter23.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第23章：量化与低精度计算</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter24.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第24章：新一代GPU特性展望</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter25.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第25章：性能分析与调优方法论</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter26.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第26章：CUDA调试技术与错误处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter27.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第27章：开发环境与工具链配置</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="11">第11章：激光雷达点云处理加速</h1>
+<h2 id="_1">章节大纲</h2>
+<h3 id="111-gpu">11.1 点云数据结构与GPU存储优化</h3>
+<ul>
+<li>点云数据的特性与挑战</li>
+<li>AoS vs SoA布局选择</li>
+<li>动态点云的内存管理</li>
+<li>空间局部性优化</li>
+</ul>
+<h3 id="112">11.2 空间索引结构的并行构建</h3>
+<ul>
+<li>KD-Tree的GPU并行构建算法</li>
+<li>Octree的自底向上构建</li>
+<li>Morton编码与空间填充曲线</li>
+<li>平衡树的负载均衡策略</li>
+</ul>
+<h3 id="113-cuda">11.3 最近邻搜索的CUDA优化</h3>
+<ul>
+<li>暴力搜索的向量化实现</li>
+<li>KD-Tree搜索的并行化</li>
+<li>近似最近邻算法</li>
+<li>批量查询优化</li>
+</ul>
+<h3 id="114">11.4 点云配准算法加速</h3>
+<ul>
+<li>ICP算法的GPU实现</li>
+<li>NDT配准的并行化策略</li>
+<li>对应点匹配优化</li>
+<li>变换矩阵的并行求解</li>
+</ul>
+<h3 id="115-3d">11.5 实时3D目标检测</h3>
+<ul>
+<li>PointPillars的CUDA实现</li>
+<li>CenterPoint的关键优化</li>
+<li>体素化与特征提取</li>
+<li>NMS的GPU加速</li>
+</ul>
+<h3 id="_2">本章小结</h3>
+<h3 id="_3">练习题</h3>
+<h3 id="_4">常见陷阱与错误</h3>
+<h3 id="_5">最佳实践检查清单</h3>
+<hr />
+<h2 id="111-gpu_1">11.1 点云数据结构与GPU存储优化</h2>
+<p>激光雷达作为自动驾驶的核心传感器，每秒产生数百万个3D点。典型的64线激光雷达在10Hz频率下，每帧包含约120,000个点，每个点包含位置(x,y,z)、强度(intensity)、时间戳等信息。实时处理这些海量数据需要充分利用GPU的并行计算能力，而高效的数据结构设计是性能优化的基础。</p>
+<h3 id="_6">点云数据的特性与挑战</h3>
+<p>点云数据具有以下独特特性：</p>
+<ol>
+<li><strong>稀疏性</strong>：点云在3D空间中分布不均匀，远处稀疏、近处密集</li>
+<li><strong>无序性</strong>：原始点云没有固定的拓扑结构</li>
+<li><strong>动态范围大</strong>：坐标值范围从几米到上百米</li>
+<li><strong>噪声敏感</strong>：包含测量噪声和动态物体</li>
+</ol>
+<p>这些特性给GPU处理带来挑战：</p>
+<div class="codehilite"><pre><span></span><code>内存访问模式挑战：
+┌─────────────────────────────────┐
+│  稀疏点云 → 不规则内存访问      │
+│  动态大小 → 内存分配开销        │
+│  空间查询 → 随机访问模式        │
+└─────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="aos-vs-soa">AoS vs SoA布局选择</h3>
+<p>点云数据在GPU上有两种主要存储布局：</p>
+<p><strong>AoS (Array of Structures)</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Point</span><span class="w"> </span><span class="n">points</span><span class="o">[</span><span class="n">N</span><span class="o">]</span><span class="p">;</span><span class="w">  </span><span class="o">//</span><span class="w"> </span><span class="n">每个点的所有属性连续存储</span>
+<span class="n">struct</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="err">{</span>
+<span class="w">    </span><span class="nc">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="nc">float</span><span class="w"> </span><span class="n">intensity</span><span class="p">;</span>
+<span class="w">    </span><span class="n">uint32_t</span><span class="w"> </span><span class="nc">timestamp</span><span class="p">;</span>
+<span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+
+<p><strong>SoA (Structure of Arrays)</strong>：</p>
+<div class="codehilite"><pre><span></span><code>struct PointCloud {
+    float* x;        // 所有x坐标连续
+    float* y;        // 所有y坐标连续  
+    float* z;        // 所有z坐标连续
+    float* intensity;
+    uint32_t* timestamp;
+};
+</code></pre></div>
+
+<p>性能对比分析：</p>
+<p>| 操作类型 | AoS性能 | SoA性能 | 原因分析 |</p>
+<table>
+<thead>
+<tr>
+<th>操作类型</th>
+<th>AoS性能</th>
+<th>SoA性能</th>
+<th>原因分析</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单点完整访问</td>
+<td>优秀</td>
+<td>较差</td>
+<td>AoS局部性好</td>
+</tr>
+<tr>
+<td>批量坐标计算</td>
+<td>较差</td>
+<td>优秀</td>
+<td>SoA合并访问</td>
+</tr>
+<tr>
+<td>空间查询</td>
+<td>中等</td>
+<td>优秀</td>
+<td>SoA便于SIMD</td>
+</tr>
+<tr>
+<td>内存带宽利用</td>
+<td>60-70%</td>
+<td>85-95%</td>
+<td>SoA避免浪费</td>
+</tr>
+</tbody>
+</table>
+<p>对于大多数点云算法，SoA布局能获得1.5-3倍的性能提升，因为：</p>
+<ul>
+<li>坐标计算（距离、法向量）只需访问xyz</li>
+<li>向量化指令(float4)可一次加载多个点的同一属性</li>
+<li>避免加载不需要的属性浪费带宽</li>
+</ul>
+<h3 id="_7">动态点云的内存管理</h3>
+<p>自动驾驶场景中点云大小动态变化（隧道vs开阔路面），需要高效的GPU内存管理策略：</p>
+<ol>
+<li><strong>内存池预分配</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>初始化阶段：
+┌──────────────────────────────┐
+│ 预分配最大容量 (如200K点)     │
+│ ┌────┬────┬────┬────┬────┐  │
+│ │Pool│Pool│Pool│Pool│Free│  │
+│ └────┴────┴────┴────┴────┘  │
+└──────────────────────────────┘
+
+运行时动态调整：
+
+- 小点云：使用部分内存池
+- 大点云：扩展或使用多池
+</code></pre></div>
+
+<ol start="2">
+<li><strong>双缓冲流水线</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">Frame</span><span class="w"> </span><span class="nl">N</span><span class="p">:</span><span class="w">   </span><span class="o">[</span><span class="n">GPU处理</span><span class="o">]</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="n">Buffer</span><span class="w"> </span><span class="n">A</span>
+<span class="w">           </span><span class="n">同时</span>
+<span class="n">Frame</span><span class="w"> </span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">CPU→GPU传输</span><span class="o">]</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Buffer</span><span class="w"> </span><span class="n">B</span>
+
+<span class="n">下一时刻切换</span><span class="err">：</span>
+<span class="n">Frame</span><span class="w"> </span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">GPU处理</span><span class="o">]</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="n">Buffer</span><span class="w"> </span><span class="n">B</span><span class="w">  </span>
+<span class="n">Frame</span><span class="w"> </span><span class="n">N</span><span class="o">+</span><span class="mi">2</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">CPU→GPU传输</span><span class="o">]</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Buffer</span><span class="w"> </span><span class="n">A</span>
+</code></pre></div>
+
+<p>这种设计可以完全隐藏PCIe传输延迟，实现零拷贝开销。</p>
+<ol start="3">
+<li><strong>统一内存与按需分页</strong></li>
+</ol>
+<p>CUDA统一内存(Unified Memory)简化编程但需谨慎使用：</p>
+<div class="codehilite"><pre><span></span><code>优点：
+
+- 自动数据迁移
+- 超额分配支持
+- 简化指针管理
+
+缺点：
+
+- 页错误开销 (首次访问~10μs)
+- 难以控制预取
+- 可能触发抖动
+</code></pre></div>
+
+<p>最佳实践：静态场景地图用UM，动态点云用显式管理。</p>
+<h3 id="_8">空间局部性优化</h3>
+<p>提高空间局部性是优化缓存命中率的关键：</p>
+<ol>
+<li><strong>Morton编码重排序</strong></li>
+</ol>
+<p>将3D坐标映射到1D Morton码，保持空间邻近性：</p>
+<div class="codehilite"><pre><span></span><code>原始顺序（按扫描线）：
+点1(0,0,0) → 点2(100,0,0) → 点3(0,1,0)
+缓存命中率低，空间跳跃大
+
+Morton重排序后：
+点1(0,0,0) → 点3(0,1,0) → 点5(1,0,0)  
+空间相邻点在内存中也相邻
+</code></pre></div>
+
+<p>Morton编码通过交织xyz的二进制位实现：</p>
+<div class="codehilite"><pre><span></span><code>x = 0b0011 (3)
+y = 0b0101 (5)  
+z = 0b0110 (6)
+Morton = 0b001101011110 (交织: z1y1x1z0y0x0...)
+</code></pre></div>
+
+<ol start="2">
+<li><strong>分块处理（Tiling）</strong></li>
+</ol>
+<p>将点云划分为空间块，每个线程块处理一个空间块：</p>
+<div class="codehilite"><pre><span></span><code>┌─────┬─────┬─────┐
+│ B0  │ B1  │ B2  │  64x64x64m空间
+├─────┼─────┼─────┤  划分为8x8x8m块
+│ B3  │ B4  │ B5  │  每块分配给一个
+├─────┼─────┼─────┤  线程块处理
+│ B6  │ B7  │ B8  │  
+└─────┴─────┴─────┘
+</code></pre></div>
+
+<p>优势：</p>
+<ul>
+<li>L2缓存局部性提升3-5倍</li>
+<li>减少全局内存访问50%+</li>
+<li>便于负载均衡（动态调度块）</li>
+</ul>
+<ol start="3">
+<li><strong>数据压缩与量化</strong></li>
+</ol>
+<p>利用点云的有限精度特性压缩存储：</p>
+<div class="codehilite"><pre><span></span><code><span class="err">原始</span><span class="o">:</span><span class="w"> </span><span class="n">float32</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="n">y</span><span class="o">,</span><span class="n">z</span><span class="w"> </span><span class="o">(</span><span class="mi">12</span><span class="err">字节</span><span class="o">/</span><span class="err">点</span><span class="o">)</span>
+<span class="err">压缩</span><span class="o">:</span><span class="w"> </span><span class="n">int16</span><span class="w"> </span><span class="n">x</span><span class="o">,</span><span class="n">y</span><span class="o">,</span><span class="n">z</span><span class="w"> </span><span class="o">(</span><span class="mi">6</span><span class="err">字节</span><span class="o">/</span><span class="err">点</span><span class="o">)</span>
+<span class="w">      </span><span class="err">范围</span><span class="o">[-</span><span class="mf">327.68</span><span class="n">m</span><span class="o">,</span><span class="w"> </span><span class="mf">327.67</span><span class="n">m</span><span class="o">]</span>
+<span class="w">      </span><span class="err">精度</span><span class="o">:</span><span class="w"> </span><span class="mf">0.01</span><span class="n">m</span><span class="w"> </span><span class="o">(</span><span class="err">厘米级</span><span class="o">)</span>
+
+<span class="err">压缩率</span><span class="o">:</span><span class="w"> </span><span class="mi">50</span><span class="o">%</span>
+<span class="err">带宽提升</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="n">x</span>
+<span class="err">精度损失</span><span class="o">:</span><span class="w"> </span><span class="o">&lt;</span><span class="mi">1</span><span class="n">cm</span><span class="w"> </span><span class="o">(</span><span class="err">可接受</span><span class="o">)</span>
+</code></pre></div>
+
+<p>对于颜色/强度等属性，8位量化通常足够。</p>
+<h3 id="_9">向量化访存优化</h3>
+<p>利用CUDA的向量类型提升内存吞吐：</p>
+<ol>
+<li><strong>float4向量加载</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 低效：3次独立加载</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_x</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_y</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span><span class="w">  </span>
+<span class="kt">float</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_z</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+
+<span class="c1">// 高效：1次向量加载（需要额外padding）</span>
+<span class="kt">float4</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">points</span><span class="p">)[</span><span class="n">idx</span><span class="p">];</span>
+<span class="c1">// point.x, point.y, point.z, point.w(padding)</span>
+</code></pre></div>
+
+<p>性能提升：25-40%（取决于其他计算开销）</p>
+<ol start="2">
+<li><strong>共享内存的向量化填充</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 每个线程加载4个点到共享内存</span>
+<span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">shared_vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">shared_points</span><span class="p">);</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">vec_idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="n">shared_vec</span><span class="p">[</span><span class="n">vec_idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">global_vec</span><span class="p">[</span><span class="n">block_offset</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">vec_idx</span><span class="p">];</span>
+<span class="nf">__syncthreads</span><span class="p">();</span>
+</code></pre></div>
+
+<p>这种方式可以达到&gt;90%的内存带宽利用率。</p>
+<h3 id="_10">内存访问模式优化实例</h3>
+<p>下面展示一个优化前后的距离计算核函数对比：</p>
+<p><strong>优化前（AoS布局，非合并访问）：</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">computeDistance_v1</span><span class="p">(</span><span class="n">Point</span><span class="o">*</span><span class="w"> </span><span class="n">points</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">distances</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Point</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span><span class="w">  </span><span class="c1">// 加载20字节，只用12字节</span>
+<span class="w">        </span><span class="n">distances</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sqrtf</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+<span class="c1">// 性能：~40GB/s带宽利用率</span>
+</code></pre></div>
+
+<p><strong>优化后（SoA布局，向量化访问）：</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">computeDistance_v2</span><span class="p">(</span><span class="kt">float4</span><span class="o">*</span><span class="w"> </span><span class="n">points_xyz</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">distances</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">float4</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_xyz</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span><span class="w">  </span><span class="c1">// 一次加载xyz+padding</span>
+<span class="w">        </span><span class="n">distances</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sqrtf</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+<span class="c1">// 性能：~380GB/s带宽利用率（接近理论峰值）</span>
+</code></pre></div>
+
+<p>优化效果：9.5倍带宽提升，4-6倍整体性能提升。</p>
+<h2 id="112_1">11.2 空间索引结构的并行构建</h2>
+<p>空间索引是点云处理的核心数据结构，支持高效的最近邻搜索、范围查询和空间划分。传统的串行构建算法在GPU上难以直接并行化，本节介绍适合GPU的并行构建策略。</p>
+<h3 id="kd-treegpu">KD-Tree的GPU并行构建算法</h3>
+<p>KD-Tree是k维空间的二叉搜索树，在3D点云中广泛应用。GPU并行构建的核心挑战是树结构的递归特性与GPU的SIMT执行模型不匹配。</p>
+<p><strong>传统串行构建的问题：</strong></p>
+<div class="codehilite"><pre><span></span><code>串行递归构建：
+
+1. 选择分割维度和分割点
+2. 划分点集为左右子集
+3. 递归构建左右子树
+
+问题：
+
+- 递归深度不确定 → GPU栈溢出
+- 分支不平衡 → warp divergence
+- 指针操作频繁 → 内存不合并
+</code></pre></div>
+
+<p><strong>GPU并行构建策略：</strong></p>
+<ol>
+<li><strong>自顶向下的层次并行</strong></li>
+</ol>
+<p>将树的构建按层次进行，每层并行处理所有节点：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">Level</span><span class="w"> </span><span class="mi">0</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">Root</span><span class="o">]</span><span class="w">           </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="n">个节点</span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">1</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">L</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">R</span><span class="o">]</span><span class="w">          </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="n">个节点并行</span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">2</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">LL</span><span class="o">][</span><span class="n">LR</span><span class="o">][</span><span class="n">RL</span><span class="o">][</span><span class="n">RR</span><span class="o">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="n">个节点并行</span>
+<span class="p">...</span>
+<span class="k">Level</span><span class="w"> </span><span class="nl">k</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="o">^</span><span class="n">k个节点并行处理</span>
+</code></pre></div>
+
+<p>实现要点：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 每个线程块处理一个节点的分割</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">buildKDTreeLevel</span><span class="p">(</span>
+<span class="w">    </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">points</span><span class="p">,</span><span class="w">          </span><span class="c1">// 点云数据</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">node_ranges</span><span class="p">,</span><span class="w">       </span><span class="c1">// 每个节点的点范围</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">split_dims</span><span class="p">,</span><span class="w">        </span><span class="c1">// 分割维度</span>
+<span class="w">    </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">split_values</span><span class="p">,</span><span class="w">    </span><span class="c1">// 分割值</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w">              </span><span class="c1">// 当前层</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">num_nodes</span><span class="w">           </span><span class="c1">// 该层节点数</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">node_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">node_id</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">num_nodes</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 获取该节点负责的点范围</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_ranges</span><span class="p">[</span><span class="n">node_id</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_ranges</span><span class="p">[</span><span class="n">node_id</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 协作计算中位数（使用共享内存）</span>
+<span class="w">    </span><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">shared_coords</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">split_dim</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">  </span><span class="c1">// 循环选择xyz</span>
+
+<span class="w">    </span><span class="c1">// 并行加载坐标到共享内存</span>
+<span class="w">    </span><span class="n">cooperativeLoadCoords</span><span class="p">(</span><span class="n">points</span><span class="p">,</span><span class="w"> </span><span class="n">shared_coords</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">split_dim</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 并行快速选择算法找中位数</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">median</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parallelQuickSelect</span><span class="p">(</span><span class="n">shared_coords</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">split_dims</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">split_dim</span><span class="p">;</span>
+<span class="w">        </span><span class="n">split_values</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">median</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 并行划分点集</span>
+<span class="w">    </span><span class="n">parallelPartition</span><span class="p">(</span><span class="n">points</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">split_dim</span><span class="p">,</span><span class="w"> </span><span class="n">median</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>基于Morton码的隐式构建</strong></li>
+</ol>
+<p>利用Morton码的空间填充特性，无需显式构建树结构：</p>
+<div class="codehilite"><pre><span></span><code>Morton码排序后的隐式KD-Tree：
+┌────────────────────────┐
+│ 点按Morton码排序       │
+│ [P0,P1,P2...Pn]       │
+└────────────────────────┘
+         ↓
+隐式树结构（无需指针）：
+
+- 节点i的左子：2i+1
+- 节点i的右子：2i+2
+- 完全平衡树
+</code></pre></div>
+
+<p>优势：</p>
+<ul>
+<li>无指针操作，纯数组访问</li>
+<li>完全平衡，无warp divergence</li>
+<li>构建时间O(n log n)，仅排序开销</li>
+</ul>
+<ol start="3">
+<li><strong>小规模子树的串行处理</strong></li>
+</ol>
+<p>当子树规模小于阈值（如32点）时，切换到串行处理：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">num_points</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">SERIAL_THRESHOLD</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 单线程串行构建小子树</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">buildSerialKDTree</span><span class="p">(</span><span class="n">points</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 继续并行构建</span>
+<span class="w">    </span><span class="n">launchParallelSplit</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="o">&gt;&gt;&gt;</span><span class="p">(...);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>这种混合策略避免了小任务的并行开销。</p>
+<h3 id="octree">Octree的自底向上构建</h3>
+<p>Octree将3D空间递归划分为8个子空间，适合均匀分布的点云。GPU上采用自底向上构建策略更高效。</p>
+<p><strong>构建流程：</strong></p>
+<ol>
+<li><strong>体素化与哈希</strong></li>
+</ol>
+<p>将点云映射到最细粒度的体素网格：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">voxelizePoints</span><span class="p">(</span>
+<span class="w">    </span><span class="kt">float3</span><span class="o">*</span><span class="w"> </span><span class="n">points</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">voxel_keys</span><span class="p">,</span><span class="w">    </span><span class="c1">// Morton编码的体素键</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">n_points</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">voxel_size</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">n_points</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">float3</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">    </span><span class="c1">// 计算体素坐标</span>
+<span class="w">    </span><span class="kt">int3</span><span class="w"> </span><span class="n">voxel_coord</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">make_int3</span><span class="p">(</span>
+<span class="w">        </span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">voxel_size</span><span class="p">,</span>
+<span class="w">        </span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">voxel_size</span><span class="p">,</span>
+<span class="w">        </span><span class="n">p</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">voxel_size</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Morton编码作为键</span>
+<span class="w">    </span><span class="n">voxel_keys</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mortonEncode3D</span><span class="p">(</span><span class="n">voxel_coord</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>并行去重与压缩</strong></li>
+</ol>
+<p>使用推力库的unique操作去除重复体素：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">thrust</span><span class="o">::</span><span class="n">sort</span><span class="p">(</span><span class="n">voxel_keys</span><span class="p">,</span><span class="w"> </span><span class="n">voxel_keys</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">n_points</span><span class="p">);</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">n_unique</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">thrust</span><span class="o">::</span><span class="n">unique</span><span class="p">(</span><span class="n">voxel_keys</span><span class="p">,</span><span class="w"> </span><span class="n">voxel_keys</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">n_points</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">voxel_keys</span><span class="p">;</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>层次并行聚合</strong></li>
+</ol>
+<p>从叶节点开始，逐层向上构建：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">Level</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">(</span><span class="n">叶子</span><span class="p">)</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">V000</span><span class="o">][</span><span class="n">V001</span><span class="o">]</span><span class="p">...</span><span class="o">[</span><span class="n">V111</span><span class="o">]</span><span class="w"> </span>
+<span class="w">                    </span><span class="err">↓</span><span class="w"> </span><span class="mi">8</span><span class="n">个合并为1个</span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">1</span><span class="err">:</span><span class="w">        </span><span class="o">[</span><span class="n">N00</span><span class="o">][</span><span class="n">N01</span><span class="o">]</span><span class="p">...</span><span class="o">[</span><span class="n">N11</span><span class="o">]</span>
+<span class="w">                    </span><span class="err">↓</span><span class="w"> </span><span class="mi">8</span><span class="n">个合并为1个</span><span class="w">  </span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">2</span><span class="err">:</span><span class="w">        </span><span class="o">[</span><span class="n">N0</span><span class="o">][</span><span class="n">N1</span><span class="o">]</span>
+<span class="w">                    </span><span class="err">↓</span>
+<span class="k">Level</span><span class="w"> </span><span class="mi">3</span><span class="err">:</span><span class="w">        </span><span class="o">[</span><span class="n">Root</span><span class="o">]</span>
+</code></pre></div>
+
+<p>并行聚合核函数：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">buildOctreeLevel</span><span class="p">(</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">curr_level_nodes</span><span class="p">,</span><span class="w">   </span><span class="c1">// 当前层节点</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">next_level_nodes</span><span class="p">,</span><span class="w">   </span><span class="c1">// 下一层节点</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">node_children</span><span class="p">,</span><span class="w">      </span><span class="c1">// 子节点索引</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">curr_level_size</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">curr_level_size</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">node_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">curr_level_nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">parent_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_key</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">  </span><span class="c1">// 父节点键</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">child_idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_key</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mi">7</span><span class="p">;</span><span class="w">    </span><span class="c1">// 在父节点中的位置</span>
+
+<span class="w">    </span><span class="c1">// 原子操作记录父子关系</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">parent_idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">next_level_count</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="n">node_children</span><span class="p">[</span><span class="n">parent_idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">child_idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">idx</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 标记父节点存在</span>
+<span class="w">    </span><span class="n">atomicOr</span><span class="p">(</span><span class="o">&amp;</span><span class="n">next_level_exists</span><span class="p">[</span><span class="n">parent_key</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="morton">Morton编码与空间填充曲线</h3>
+<p>Morton编码是构建空间索引的关键技术，通过比特交织实现空间到线性的映射。</p>
+<p><strong>高效的GPU Morton编码：</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">expandBits</span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">16</span><span class="p">))</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x030000FF</span><span class="p">;</span>
+<span class="w">    </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w">  </span><span class="mi">8</span><span class="p">))</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x0300F00F</span><span class="p">;</span>
+<span class="w">    </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w">  </span><span class="mi">4</span><span class="p">))</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x030C30C3</span><span class="p">;</span>
+<span class="w">    </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w">  </span><span class="mi">2</span><span class="p">))</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x09249249</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">v</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">mortonEncode3D</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">expandBits</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">expandBits</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">expandBits</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>这种位操作实现比循环快10倍以上。</p>
+<p><strong>空间填充曲线的应用：</strong></p>
+<ol>
+<li><strong>缓存友好的遍历顺序</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>线性扫描 → Morton曲线扫描
+缓存命中率: 45% → 85%
+性能提升: 2.3x
+</code></pre></div>
+
+<ol start="2">
+<li><strong>快速范围查询</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code>给定空间范围 → Morton码范围
+只需比较整数范围，无需3D计算
+</code></pre></div>
+
+<ol start="3">
+<li><strong>并行基数排序</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Morton码是32位整数，适合GPU基数排序</span>
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">radixSortMortonCodes</span><span class="p">(</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="o">*</span><span class="w"> </span><span class="n">keys</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">values</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 每位4-bit的基数排序</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">bit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">bit</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w"> </span><span class="n">bit</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">countingSort</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span><span class="w"> </span><span class="n">values</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">bit</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="_11">平衡树的负载均衡策略</h3>
+<p>不平衡的空间划分导致严重的负载不均，需要动态平衡策略。</p>
+<ol>
+<li><strong>工作窃取（Work Stealing）</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">shared_queue</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">queue_size</span><span class="p">;</span>
+
+<span class="kt">__device__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">processWithStealing</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">work_item</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 尝试从本地队列获取</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">queue_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">work_item</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">shared_queue</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// 从其他线程块窃取</span>
+<span class="w">            </span><span class="n">work_item</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stealFromOtherBlock</span><span class="p">();</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">work_item</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="n">processNode</span><span class="p">(</span><span class="n">work_item</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>动态并行分配</strong></li>
+</ol>
+<p>根据子树大小动态分配计算资源：</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">dynamicTreeBuild</span><span class="p">(</span><span class="n">Node</span><span class="o">*</span><span class="w"> </span><span class="n">nodes</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">subtree_sizes</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">node_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">subtree_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">subtree_sizes</span><span class="p">[</span><span class="n">node_id</span><span class="p">];</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">subtree_size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">LARGE_THRESHOLD</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 大子树：启动新的kernel</span>
+<span class="w">        </span><span class="kt">dim3</span><span class="w"> </span><span class="nf">blocks</span><span class="p">(</span><span class="n">subtree_size</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span>
+<span class="w">        </span><span class="n">buildLargeSubtree</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">node_id</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">subtree_size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">MEDIUM_THRESHOLD</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 中等子树：使用整个线程块</span>
+<span class="w">        </span><span class="n">buildMediumSubtree</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">node_id</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 小子树：单线程处理</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">buildSmallSubtree</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">node_id</span><span class="p">]);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>自适应分割策略</strong></li>
+</ol>
+<p>根据点分布选择最优分割：</p>
+<div class="codehilite"><pre><span></span><code><span class="kt">__device__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">computeSplitCost</span><span class="p">(</span>
+<span class="w">    </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">points</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">end</span><span class="p">,</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">dim</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">split_value</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">left_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">right_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">left_extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">right_extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 并行统计左右子集</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">end</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dim</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">split_value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">left_count</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="n">atomicMax</span><span class="p">(</span><span class="o">&amp;</span><span class="n">left_extent</span><span class="p">,</span><span class="w"> </span><span class="n">fabsf</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dim</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">split_value</span><span class="p">));</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">right_count</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="n">atomicMax</span><span class="p">(</span><span class="o">&amp;</span><span class="n">right_extent</span><span class="p">,</span><span class="w"> </span><span class="n">fabsf</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dim</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">split_value</span><span class="p">));</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nf">__syncthreads</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// SAH (Surface Area Heuristic) 成本</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">left_count</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">left_extent</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">right_count</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">right_extent</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="_12">性能优化技巧</h3>
+<ol>
+<li><strong>内存合并优化</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 使用SoA布局提升合并访问</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">KDNode_SoA</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">split_values</span><span class="p">;</span><span class="w">     </span><span class="c1">// 所有节点的分割值</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">split_dims</span><span class="p">;</span><span class="w">         </span><span class="c1">// 所有节点的分割维度</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">left_children</span><span class="p">;</span><span class="w">      </span><span class="c1">// 左子节点索引</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">right_children</span><span class="p">;</span><span class="w">     </span><span class="c1">// 右子节点索引</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>共享内存缓存</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="kt">__shared__</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">cached_points</span><span class="p">[</span><span class="mi">256</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="p">];</span><span class="w">  </span><span class="c1">// 缓存256个点</span>
+<span class="kt">__shared__</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">cached_indices</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+
+<span class="c1">// 协作加载到共享内存</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">256</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cached_points</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points</span><span class="p">[</span><span class="n">pid</span><span class="p">].</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cached_points</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points</span><span class="p">[</span><span class="n">pid</span><span class="p">].</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cached_points</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points</span><span class="p">[</span><span class="n">pid</span><span class="p">].</span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cached_indices</span><span class="p">[</span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pid</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="nf">__syncthreads</span><span class="p">();</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>指令级并行</strong></li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 展开循环，增加ILP</span>
+<span class="cp">#pragma unroll 4</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float4</span><span class="w"> </span><span class="n">coords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">float4</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">points</span><span class="p">)[</span><span class="n">i</span><span class="o">/</span><span class="mi">4</span><span class="p">];</span>
+<span class="w">    </span><span class="n">keys</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mortonEncode</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+<span class="w">    </span><span class="n">keys</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mortonEncode</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="w">    </span><span class="n">keys</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mortonEncode</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">z</span><span class="p">);</span>
+<span class="w">    </span><span class="n">keys</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mortonEncode</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">w</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>典型性能数据（100万点）：</p>
+<ul>
+<li>CPU串行KD-Tree：450ms</li>
+<li>GPU并行KD-Tree：12ms (37x加速)</li>
+<li>GPU Morton Octree：8ms (56x加速)</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter10.html" class="nav-link prev">← 第10章：CUTLASS深度解析</a><a href="chapter12.html" class="nav-link next">第12章：多传感器融合的并行化 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>
