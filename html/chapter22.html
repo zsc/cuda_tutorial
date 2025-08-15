@@ -256,142 +256,395 @@
 <h2 id="221">22.1 稀疏矩阵格式</h2>
 <p>稀疏矩阵的高效存储和计算是稀疏优化的基础。不同的稀疏格式适用于不同的稀疏模式和计算场景，选择合适的格式对性能至关重要。</p>
 <h3 id="2211-csrcompressed-sparse-row">22.1.1 CSR（Compressed Sparse Row）格式</h3>
-<p>CSR是最常用的稀疏矩阵格式，特别适合行访问模式的计算。它使用三个数组来表示稀疏矩阵：</p>
-<div class="codehilite"><pre><span></span><code>稀疏矩阵 A:
+<p>CSR是最常用的稀疏矩阵格式，特别适合行访问模式的计算。它使用三个数组来表示稀疏矩阵，通过压缩行信息来节省存储空间，是许多科学计算和机器学习应用的基础数据结构。</p>
+<div class="codehilite"><pre><span></span><code><span class="n">稀疏矩阵</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="p">(</span><span class="mi">4</span><span class="err">×</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="n">个非零元素</span><span class="p">)</span><span class="err">:</span>
+<span class="o">[</span><span class="n">4  0  0  2</span><span class="o">]</span>
+<span class="o">[</span><span class="n">0  3  0  0</span><span class="o">]</span>
+<span class="o">[</span><span class="n">0  0  5  0</span><span class="o">]</span>
+<span class="o">[</span><span class="n">1  0  0  6</span><span class="o">]</span>
+
+<span class="nl">CSR表示</span><span class="p">:</span>
+<span class="k">values</span><span class="err">:</span><span class="w">     </span><span class="o">[</span><span class="n">4, 2, 3, 5, 1, 6</span><span class="o">]</span><span class="w">  </span><span class="o">//</span><span class="w"> </span><span class="n">非零元素值</span><span class="err">（</span><span class="n">按行序存储</span><span class="err">）</span>
+<span class="nl">col_idx</span><span class="p">:</span><span class="w">    </span><span class="o">[</span><span class="n">0, 3, 1, 2, 0, 3</span><span class="o">]</span><span class="w">  </span><span class="o">//</span><span class="w"> </span><span class="n">列索引</span><span class="err">（</span><span class="n">对应每个非零值</span><span class="err">）</span>
+<span class="nl">row_ptr</span><span class="p">:</span><span class="w">    </span><span class="o">[</span><span class="n">0, 2, 3, 4, 6</span><span class="o">]</span><span class="w">     </span><span class="o">//</span><span class="w"> </span><span class="n">行指针</span><span class="err">（</span><span class="n">第i行的起始位置</span><span class="err">）</span>
+
+<span class="n">解读</span><span class="err">：</span>
+
+<span class="o">-</span><span class="w"> </span><span class="n">row_ptr</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="n">到row_ptr</span><span class="o">[</span><span class="n">i+1</span><span class="o">]</span><span class="n">定义第i行的元素范围</span>
+<span class="o">-</span><span class="w"> </span><span class="n">第0行</span><span class="err">：</span><span class="k">values</span><span class="o">[</span><span class="n">0:2</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span><span class="n">4, 2</span><span class="o">]</span><span class="err">，</span><span class="n">列索引</span><span class="o">[</span><span class="n">0, 3</span><span class="o">]</span>
+<span class="o">-</span><span class="w"> </span><span class="n">第1行</span><span class="err">：</span><span class="k">values</span><span class="o">[</span><span class="n">2:3</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span><span class="n">3</span><span class="o">]</span><span class="err">，</span><span class="n">列索引</span><span class="o">[</span><span class="n">1</span><span class="o">]</span>
+<span class="o">-</span><span class="w"> </span><span class="n">存储开销</span><span class="err">：</span><span class="n">O</span><span class="p">(</span><span class="n">nnz</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="k">rows</span><span class="p">)</span><span class="err">，</span><span class="n">其中nnz为非零元素数</span>
+</code></pre></div>
+
+<p><strong>CSR格式的内存布局优势</strong>：</p>
+<ul>
+<li>行指针数组使得行遍历效率极高，O(1)定位任意行的起始位置</li>
+<li>连续存储同一行的非零元素，充分利用缓存局部性和预取机制</li>
+<li>适合SpMV（稀疏矩阵向量乘）等行主导操作，内存访问模式可预测</li>
+<li>行压缩存储减少了冗余信息，相比COO格式节省33%的索引存储</li>
+<li>支持高效的行切片和子矩阵提取操作</li>
+</ul>
+<p><strong>CUDA中的CSR并行策略</strong>：</p>
+<ol>
+<li><strong>标量模式（One thread per row）</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>线程分配：tid = blockIdx.x * blockDim.x + threadIdx.x
+处理逻辑：线程tid处理第tid行
+优势：实现简单，无需同步
+劣势：行长度差异大时负载严重不均
+适用场景：稀疏度均匀的矩阵（如规则网格离散化）
+</code></pre></div>
+
+<ol start="2">
+<li><strong>向量模式（Warp per row）</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>线程分配：每32个线程（一个warp）协作处理一行
+处理逻辑：warp内线程并行处理非零元素，shuffle归约
+优势：更好的负载均衡，warp内自动同步
+劣势：短行会浪费线程资源
+适用场景：中等稠密度矩阵（每行32-256个非零元素）
+</code></pre></div>
+
+<ol start="3">
+<li><strong>自适应模式（动态线程分配）</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>预处理：统计行长度分布，分类为短/中/长行
+短行（&lt;32）：一个线程处理
+中行（32-512）：一个warp处理
+长行（&gt;512）：一个block处理
+优势：最优负载均衡
+劣势：需要额外的预处理和调度开销
+</code></pre></div>
+
+<ol start="4">
+<li><strong>分段CSR（Segmented CSR）</strong>：
+   - 将矩阵按行分段，每段内行长度相近
+   - 不同段使用不同的并行策略
+   - 减少warp divergence，提高SIMD效率</li>
+</ol>
+<p><strong>性能优化技巧</strong>：</p>
+<ol>
+<li>
+<p><strong>内存访问优化</strong>：
+   - 使用纹理内存缓存列索引，利用空间局部性
+   - 向量化load非零值，使用float2/float4利用128位内存事务
+   - 对齐数据结构到128字节边界，优化内存合并
+   - 使用__ldg()内在函数强制L1缓存只读数据</p>
+</li>
+<li>
+<p><strong>负载均衡优化</strong>：
+   - 排序优化：按行长度排序，相似长度的行分组处理
+   - 工作队列：使用原子操作动态分配行到空闲warp
+   - 行合并：多个短行合并到一个warp处理
+   - 负载预测：基于历史数据预测负载分布</p>
+</li>
+<li>
+<p><strong>数据类型优化</strong>：
+   - 混合精度：值用FP16/BF16，索引用INT32/INT16
+   - 压缩索引：对于小矩阵使用INT16甚至INT8索引
+   - Delta编码：存储列索引差值而非绝对值
+   - 位打包：对于布尔稀疏矩阵使用位向量</p>
+</li>
+<li>
+<p><strong>算法级优化</strong>：
+   - 分块CSR：将大矩阵分块，提高缓存重用
+   - 双精度累加：使用FP64累加器避免精度损失
+   - 提前退出：检测零向量元素跳过计算
+   - 向量预加载：将常用向量元素缓存到共享内存</p>
+</li>
+</ol>
+<h3 id="2212-coocoordinate">22.1.2 COO（Coordinate）格式</h3>
+<p>COO格式是最简单直观的稀疏格式，使用三个数组分别存储行索引、列索引和值。这种格式也称为IJV格式或三元组格式，是构建其他稀疏格式的基础，在矩阵构造阶段和动态更新场景中广泛使用。</p>
+<div class="codehilite"><pre><span></span><code>同样的稀疏矩阵 A:
 [4  0  0  2]
 [0  3  0  0]
 [0  0  5  0]
 [1  0  0  6]
 
-CSR表示:
+COO表示:
+row_idx:    [0, 0, 1, 2, 3, 3]  // 行索引
+col_idx:    [0, 3, 1, 2, 0, 3]  // 列索引  
 values:     [4, 2, 3, 5, 1, 6]  // 非零元素值
-col_idx:    [0, 3, 1, 2, 0, 3]  // 列索引
-row_ptr:    [0, 2, 3, 4, 6]     // 行指针
+
+特点：
+
+<span class="k">-</span> 每个非零元素独立存储其完整坐标
+<span class="k">-</span> 不假设任何排序，元素可以任意顺序
+<span class="k">-</span> 存储开销：O(3×nnz)，是CSR的1.5倍
+<span class="k">-</span> 支持重复坐标（需要累加处理）
 </code></pre></div>
 
-<p><strong>CSR格式的内存布局优势</strong>：</p>
+<p><strong>COO格式的特点与应用场景</strong>：</p>
 <ul>
-<li>行指针数组使得行遍历效率极高，O(1)定位任意行</li>
-<li>连续存储同一行的非零元素，利于缓存局部性</li>
-<li>适合SpMV（稀疏矩阵向量乘）等行主导操作</li>
-</ul>
-<p><strong>CUDA中的CSR并行策略</strong>：</p>
-<ol>
-<li>
-<p><strong>标量模式（One thread per row）</strong>：
-   - 每个线程处理一行
-   - 适用于每行非零元素数量均匀的情况
-   - 负载不均衡时性能下降严重</p>
-</li>
-<li>
-<p><strong>向量模式（Warp per row）</strong>：
-   - 每个warp处理一行
-   - 使用warp内shuffle进行归约
-   - 更好的负载均衡，但可能浪费线程</p>
-</li>
-<li>
-<p><strong>自适应模式</strong>：
-   - 根据行的非零元素数量动态分配线程
-   - 短行用单线程，长行用warp或block
-   - 需要预处理步骤分析稀疏模式</p>
-</li>
-</ol>
-<p><strong>性能优化技巧</strong>：</p>
-<ul>
-<li>使用纹理内存缓存列索引，减少全局内存访问</li>
-<li>向量化load非零值，利用128位内存事务</li>
-<li>排序优化：按行长度排序，相似长度的行分组处理</li>
-<li>混合精度：值用FP16，索引用INT32</li>
-</ul>
-<h3 id="2212-coocoordinate">22.1.2 COO（Coordinate）格式</h3>
-<p>COO格式是最简单直观的稀疏格式，使用三个数组分别存储行索引、列索引和值：</p>
-<div class="codehilite"><pre><span></span><code><span class="n">COO表示</span><span class="o">:</span>
-<span class="n">row_idx</span><span class="o">:</span><span class="w">    </span><span class="o">[</span><span class="mi">0</span><span class="o">,</span><span class="w"> </span><span class="mi">0</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="mi">3</span><span class="o">]</span><span class="w">  </span><span class="c1">// 行索引</span>
-<span class="n">col_idx</span><span class="o">:</span><span class="w">    </span><span class="o">[</span><span class="mi">0</span><span class="o">,</span><span class="w"> </span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="mi">0</span><span class="o">,</span><span class="w"> </span><span class="mi">3</span><span class="o">]</span><span class="w">  </span><span class="c1">// 列索引  </span>
-<span class="n">values</span><span class="o">:</span><span class="w">     </span><span class="o">[</span><span class="mi">4</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="mi">5</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="mi">6</span><span class="o">]</span><span class="w">  </span><span class="c1">// 非零元素值</span>
-</code></pre></div>
-
-<p><strong>COO格式的特点</strong>：</p>
-<ul>
-<li>格式简单，易于构建和修改</li>
-<li>不要求排序，灵活性高</li>
-<li>适合极度稀疏的矩阵（稀疏度&gt;99%）</li>
-<li>原子操作友好，适合并行assembly</li>
+<li>格式简单，易于构建和修改，无需维护复杂的数据结构</li>
+<li>不要求排序，灵活性高，支持增量构建和动态插入</li>
+<li>适合极度稀疏的矩阵（稀疏度&gt;99%），存储效率相对较高</li>
+<li>原子操作友好，适合并行assembly和矩阵构造阶段</li>
+<li>天然支持矩阵转置（交换行列索引即可）</li>
+<li>便于实现矩阵运算的并行化（每个元素独立处理）</li>
 </ul>
 <p><strong>CUDA优化策略</strong>：</p>
-<ul>
-<li>使用原子操作进行结果累加，避免冲突</li>
-<li>排序优化：按Morton编码排序提升局部性</li>
-<li>分块处理：将矩阵分块，减少原子操作竞争</li>
-<li>使用共享内存作为局部累加缓冲</li>
-</ul>
-<h3 id="2213-ellellpack">22.1.3 ELL（ELLPACK）格式</h3>
-<p>ELL格式将稀疏矩阵填充成规则的二维数组，特别适合GPU的SIMD执行模型：</p>
-<div class="codehilite"><pre><span></span><code>原始稀疏矩阵:
-[4  0  0  2]
-[0  3  0  0]  
-[0  0  5  0]
-[1  0  0  6]
+<ol>
+<li><strong>原子操作优化</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>策略1：使用atomicAdd进行结果累加
 
-ELL表示（K=2，每行最多2个非零元素）:
-values:                     col_idx:
-[4  2]                      [0  3]
-[3  -]  (padding)           [1  -]
-[5  -]                      [2  -]
-[1  6]                      [0  3]
+- 简单直接，但可能有竞争
+- 适用于输出稀疏的情况
+
+策略2：分段原子操作
+
+- 将输出向量分段，每段独立原子操作
+- 减少竞争，提高吞吐量
+
+策略3：使用共享内存缓冲
+
+- 先在共享内存累加，再写回全局内存
+- 显著减少全局内存原子操作
+</code></pre></div>
+
+<ol start="2">
+<li>
+<p><strong>排序优化策略</strong>：
+   - Morton编码（Z-order）排序：提升2D空间局部性
+   - Hilbert曲线排序：更好的局部性保持
+   - 行主序排序：便于转换为CSR格式
+   - 分块排序：块内有序，块间可以无序</p>
+</li>
+<li>
+<p><strong>分块处理技术</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>将矩阵逻辑分块为tiles:
+
+- Tile大小：通常32×32或64×64
+- 每个block处理一个或多个tile
+- Tile内使用共享内存累加
+- 减少原子操作竞争范围
+</code></pre></div>
+
+<ol start="4">
+<li>
+<p><strong>哈希表加速</strong>：
+   - 使用哈希表管理坐标到值的映射
+   - 支持O(1)的查找和更新
+   - 特别适合动态稀疏模式
+   - GPU哈希表实现需要处理冲突</p>
+</li>
+<li>
+<p><strong>批量COO处理</strong>：
+   - 多个小矩阵打包成一个大COO
+   - 添加batch维度索引
+   - 提高GPU利用率
+   - 适合图神经网络的批量图处理</p>
+</li>
+</ol>
+<h3 id="2213-ellellpack">22.1.3 ELL（ELLPACK）格式</h3>
+<p>ELL格式将稀疏矩阵填充成规则的二维数组，特别适合GPU的SIMD执行模型。这种格式通过牺牲一定的存储空间来换取完美的内存访问模式，是GPU稀疏计算的理想选择之一。</p>
+<div class="codehilite"><pre><span></span><code>原始稀疏矩阵<span class="w"> </span><span class="nf">A </span><span class="p">(</span><span class="m">4</span>×<span class="m">4</span><span class="p">)</span><span class="o">:</span>
+<span class="p">[</span><span class="m">4</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">2</span><span class="p">]</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="m">2</span>个非零元素
+<span class="p">[</span><span class="m">0</span><span class="w">  </span><span class="m">3</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="p">]</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="m">1</span>个非零元素
+<span class="p">[</span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">5</span><span class="w">  </span><span class="m">0</span><span class="p">]</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="m">1</span>个非零元素<span class="w">  </span>
+<span class="p">[</span><span class="m">1</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">6</span><span class="p">]</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="m">2</span>个非零元素
+
+<span class="n">ELL表示</span>（<span class="n">K</span><span class="o">=</span><span class="m">2</span>，每行固定存储<span class="m">2</span>个元素）<span class="o">:</span>
+<span class="nf">values矩阵</span><span class="p">(</span><span class="m">4</span>×<span class="m">2</span><span class="p">)</span><span class="o">:</span><span class="w">           </span><span class="nf">col_idx矩阵</span><span class="p">(</span><span class="m">4</span>×<span class="m">2</span><span class="p">)</span><span class="o">:</span>
+<span class="p">[</span><span class="m">4</span><span class="w">  </span><span class="m">2</span><span class="p">]</span><span class="w">                      </span><span class="p">[</span><span class="m">0</span><span class="w">  </span><span class="m">3</span><span class="p">]</span>
+<span class="p">[</span><span class="m">3</span><span class="w">  </span><span class="o">*</span><span class="p">]</span><span class="w">  </span><span class="p">(</span><span class="o">*</span>为<span class="n">padding</span><span class="p">)</span><span class="w">        </span><span class="p">[</span><span class="m">1</span><span class="w">  </span><span class="m">-1</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="m">-1</span>表示无效<span class="p">)</span>
+<span class="p">[</span><span class="m">5</span><span class="w">  </span><span class="o">*</span><span class="p">]</span><span class="w">                      </span><span class="p">[</span><span class="m">2</span><span class="w">  </span><span class="m">-1</span><span class="p">]</span>
+<span class="p">[</span><span class="m">1</span><span class="w">  </span><span class="m">6</span><span class="p">]</span><span class="w">                      </span><span class="p">[</span><span class="m">0</span><span class="w">  </span><span class="m">3</span><span class="p">]</span>
+
+存储布局（列主序，<span class="n">GPU友好</span>）<span class="o">:</span>
+<span class="n">values</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">5</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">2</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="m">6</span><span class="p">]</span><span class="w">  </span><span class="o">//</span><span class="w"> </span>第<span class="m">1</span>列<span class="p">,</span><span class="w"> </span>第<span class="m">2</span>列
+<span class="n">col_idx</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">2</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">-1</span><span class="p">,</span><span class="w"> </span><span class="m">-1</span><span class="p">,</span><span class="w"> </span><span class="m">3</span><span class="p">]</span>
 </code></pre></div>
 
 <p><strong>ELL格式的优势</strong>：</p>
 <ul>
-<li>完美的内存合并访问模式</li>
-<li>无需同步，线程间完全独立</li>
-<li>固定的内存访问模式，易于优化</li>
-<li>适合非零元素分布均匀的矩阵</li>
+<li>完美的内存合并访问模式：所有线程访问连续内存地址</li>
+<li>无需同步，线程间完全独立，无数据依赖</li>
+<li>固定的内存访问模式，编译器易于优化和向量化</li>
+<li>适合非零元素分布均匀的矩阵（如有限元离散化）</li>
+<li>消除了负载不均衡问题，所有线程执行相同工作量</li>
+<li>支持高效的SIMD操作和向量指令</li>
 </ul>
+<p><strong>K值选择与分析</strong>：</p>
+<div class="codehilite"><pre><span></span><code>K值选择策略：
+
+1. 统计每行非零元素数量分布
+2. 计算不同K值的覆盖率和浪费率
+3. 权衡存储开销vs计算效率
+
+示例分析：
+行长度分布：[1:20%, 2:30%, 3:25%, 4:15%, 5:10%]
+K=3时：覆盖75%，padding率=(3×100-实际非零数)/3×100
+K=4时：覆盖90%，padding率更高
+K=5时：覆盖100%，但可能浪费大量空间
+</code></pre></div>
+
 <p><strong>Padding策略与优化</strong>：</p>
-<ul>
-<li>自适应K值：统计分析选择覆盖95%行的K值</li>
-<li>分片ELL：不同片使用不同的K值</li>
-<li>混合格式：ELL+COO，超出K的元素用COO存储</li>
-<li>向量化：使用float4一次加载多个元素</li>
-</ul>
-<h3 id="2214">22.1.4 格式转换与选择策略</h3>
-<p><strong>格式转换的并行算法</strong>：</p>
 <ol>
 <li>
-<p><strong>CSR到COO转换</strong>：
-   - 使用前缀和展开row_ptr
-   - 高度并行，适合GPU执行</p>
+<p><strong>自适应K值选择</strong>：
+   - 统计分析：选择覆盖90-95%行的K值
+   - 成本模型：min(存储开销 + 计算开销)
+   - 动态调整：根据运行时稀疏模式调整</p>
 </li>
 <li>
-<p><strong>COO到CSR转换</strong>：
-   - 需要排序和压缩
-   - 使用基数排序或推力库</p>
-</li>
-<li>
-<p><strong>Dense到Sparse转换</strong>：
-   - 两遍扫描：计数和填充
-   - 使用原子操作或分段归约</p>
+<p><strong>分片ELL（Sliced ELL）</strong>：</p>
 </li>
 </ol>
+<div class="codehilite"><pre><span></span><code>将矩阵按行分成多个片段：
+片段1（行0-999）：K1=3
+片段2（行1000-1999）：K2=5
+片段3（行2000-2999）：K3=2
+每个片段独立处理，减少padding浪费
+</code></pre></div>
+
+<ol start="3">
+<li><strong>混合格式（ELL+COO）</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>ELL部分：存储每行前K个非零元素
+COO部分：存储超出K的额外元素
+优势：结合ELL的规则性和COO的灵活性
+适用：大部分行稀疏，少数行稠密
+</code></pre></div>
+
+<ol start="4">
+<li>
+<p><strong>向量化访问</strong>：
+   - 使用float2/float4一次加载多个元素
+   - 列主序存储利于向量化
+   - 使用纹理内存加速随机列访问
+   - 预取技术减少内存延迟</p>
+</li>
+<li>
+<p><strong>压缩技术</strong>：
+   - 位图标记有效元素，避免存储无效索引
+   - Run-length编码压缩连续padding
+   - 差分编码减少索引存储</p>
+</li>
+</ol>
+<h3 id="2214">22.1.4 格式转换与选择策略</h3>
+<p>稀疏格式之间的高效转换是实际应用的关键需求，不同计算阶段可能需要不同的格式。理解转换算法和选择策略对于构建高性能稀疏应用至关重要。</p>
+<p><strong>格式转换的并行算法</strong>：</p>
+<ol>
+<li><strong>CSR到COO转换</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">并行算法</span><span class="err">：</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">计算总非零元素数</span><span class="err">：</span><span class="n">nnz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">row_ptr</span><span class="o">[</span><span class="n">rows</span><span class="o">]</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">并行展开row_ptr为行索引</span><span class="err">：</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">每个线程处理一行</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">使用前缀和确定写入位置</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">直接复制col_idx和values数组</span>
+
+<span class="n">复杂度</span><span class="err">：</span><span class="n">O</span><span class="p">(</span><span class="k">rows</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">nnz</span><span class="p">)</span><span class="n">并行时间</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>COO到CSR转换</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>两阶段算法：
+阶段1：排序和计数
+
+<span class="k">-</span> 按(row, col)排序COO三元组
+<span class="k">-</span> 并行计算每行的非零元素数
+
+阶段2：构建CSR
+
+<span class="k">-</span> 前缀和生成row_ptr
+<span class="k">-</span> 复制排序后的列索引和值
+
+优化：使用基数排序获得O(nnz)复杂度
+</code></pre></div>
+
+<ol start="3">
+<li><strong>Dense到Sparse转换</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>两遍扫描算法：
+第一遍：计数非零元素
+
+- 并行扫描所有元素
+- 原子计数或分段归约
+
+第二遍：填充稀疏数组
+
+- 分配精确大小的存储
+- 并行写入非零元素
+
+优化：使用warp级协作减少原子操作
+</code></pre></div>
+
+<ol start="4">
+<li><strong>ELL到CSR转换</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>压缩算法：
+
+1. 计算每行实际非零数（跳过padding）
+2. 前缀和生成row_ptr
+3. 紧凑存储非padding元素
+
+特点：保持行序，无需排序
+</code></pre></div>
+
 <p><strong>格式选择决策树</strong>：</p>
-<div class="codehilite"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="ss">(</span>稀疏度<span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">50</span><span class="o">%</span><span class="ss">)</span>:
-<span class="w">    </span>使用<span class="nv">Dense</span>格式
-<span class="nv">elif</span><span class="w"> </span><span class="ss">(</span>每行非零数变化<span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">2</span><span class="nv">x</span><span class="ss">)</span>:
-<span class="w">    </span>使用<span class="nv">ELL</span>格式
-<span class="nv">elif</span><span class="w"> </span><span class="ss">(</span>需要频繁修改<span class="ss">)</span>:
-<span class="w">    </span>使用<span class="nv">COO</span>格式
-<span class="k">else</span>:
-<span class="w">    </span>使用<span class="nv">CSR</span>格式
+<div class="codehilite"><pre><span></span><code>矩阵特征分析：
+├─ 稀疏度 &lt; 50%？
+│  └─ 使用Dense格式（利用Tensor Core）
+├─ 每行非零数标准差 &lt; 平均值×0.5？
+│  └─ 使用ELL格式（规则访问模式）
+├─ 需要频繁插入/删除？
+│  └─ 使用COO格式（动态友好）
+├─ 以行遍历为主？
+│  └─ 使用CSR格式（行局部性好）
+├─ 以列遍历为主？
+│  └─ 使用CSC格式（列局部性好）
+└─ 分块结构明显？
+   └─ 使用BSR格式（块稀疏行）
 </code></pre></div>
 
 <p><strong>性能基准对比</strong>：</p>
-<ul>
-<li>SpMV性能：ELL &gt; CSR &gt; COO（均匀分布时）</li>
-<li>内存占用：CSR &lt; COO &lt; ELL（高稀疏度时）</li>
-<li>构建开销：COO &lt; CSR &lt; ELL</li>
-<li>灵活性：COO &gt; CSR &gt; ELL</li>
-</ul>
+<div class="codehilite"><pre><span></span><code>场景：矩阵规模100K×100K，稀疏度95%
+硬件：NVIDIA A100 GPU
+
+SpMV性能（GFLOPS）：
+
+- ELL：     45.2（非零分布均匀）
+- CSR：     38.7（自适应算法）
+- COO：     25.3（原子操作）
+- HYB：     42.1（ELL+COO混合）
+
+内存占用（MB）：
+
+- CSR：     24（最紧凑）
+- COO：     36（1.5×CSR）
+- ELL：     85（含50% padding）
+- Dense：   40000（不可行）
+
+构建时间（ms）：
+
+- COO：     12（直接构建）
+- CSR：     18（需要排序）
+- ELL：     25（需要分析+padding）
+
+更新开销（单个元素）：
+
+- COO：     O(1)（追加）
+- CSR：     O(nnz)（最坏情况）
+- ELL：     O(1)（如果不超过K）
+</code></pre></div>
+
+<p><strong>自适应格式选择框架</strong>：</p>
+<div class="codehilite"><pre><span></span><code>运行时决策系统：
+
+1. 矩阵分析（采样或完整扫描）
+2. 性能模型预测
+3. 格式选择与转换
+4. 性能监控与反馈
+5. 动态调整策略
+</code></pre></div>
+
 <h2 id="222-cusparse">22.2 cuSPARSE高级用法</h2>
 <p>cuSPARSE是NVIDIA提供的稀疏线性代数库，提供了高度优化的稀疏矩阵运算。本节深入探讨其高级特性和优化技巧。</p>
 <h3 id="2221-cusparseapi">22.2.1 cuSPARSE架构与API演进</h3>

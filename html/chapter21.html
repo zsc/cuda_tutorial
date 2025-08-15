@@ -1032,10 +1032,440 @@ python3<span class="w"> </span>analyze_power.py<span class="w"> </span>power_log
 </code></pre></div>
 
 <h2 id="214-tensorrt">21.4 TensorRT集成</h2>
+<p>TensorRT是NVIDIA专为推理优化设计的高性能深度学习推理库，在Jetson平台上扮演着关键角色。它通过层融合、精度校准、内核自动调优等技术，可以将模型推理速度提升3-10倍，同时降低内存占用和功耗。对于自动驾驶和具身智能应用，TensorRT是实现实时推理的核心技术。</p>
 <h3 id="2141">21.4.1 模型转换流程</h3>
+<p>将训练好的模型转换为TensorRT引擎涉及多个步骤，每一步都有其优化空间。理解整个转换流程对于获得最佳性能至关重要。</p>
+<p><strong>转换路径选择</strong>：</p>
+<p>TensorRT支持多种模型格式的转换路径，每种路径有不同的优缺点：</p>
+<div class="codehilite"><pre><span></span><code>PyTorch → ONNX → TensorRT：最通用，支持动态图
+TensorFlow → TF-TRT → TensorRT：集成度高，保留TF生态
+TensorFlow → ONNX → TensorRT：更好的算子支持
+Caffe → TensorRT：直接支持，但功能有限
+</code></pre></div>
+
+<p>选择转换路径时需要考虑：</p>
+<ul>
+<li><strong>算子覆盖率</strong>：不是所有算子都被TensorRT原生支持</li>
+<li><strong>动态维度需求</strong>：某些路径更好地支持动态输入</li>
+<li><strong>精度要求</strong>：不同路径的数值精度可能略有差异</li>
+<li><strong>转换复杂度</strong>：直接路径通常更简单但灵活性较低</li>
+</ul>
+<p><strong>ONNX转换最佳实践</strong>：</p>
+<p>ONNX作为中间表示格式，是最灵活的转换路径。转换过程中的关键考虑：</p>
+<ol>
+<li>
+<p><strong>导出配置优化</strong>：
+   - 设置正确的opset版本以获得最佳算子支持
+   - 使用动态轴处理可变批大小
+   - 启用常量折叠减少图复杂度</p>
+</li>
+<li>
+<p><strong>图优化技术</strong>：
+   - 移除不必要的类型转换节点
+   - 合并连续的transpose操作
+   - 简化复杂的reshape序列</p>
+</li>
+<li>
+<p><strong>算子兼容性处理</strong>：
+   - 使用onnx-simplifier简化计算图
+   - 替换不支持的算子为等效实现
+   - 添加自定义算子插件支持</p>
+</li>
+</ol>
+<p><strong>TensorRT引擎构建</strong>：</p>
+<p>引擎构建是性能优化的核心阶段，TensorRT在此阶段执行多种优化：</p>
+<ol>
+<li><strong>层融合（Layer Fusion）</strong>：
+   融合相邻的层减少内存访问和内核启动开销。常见的融合模式包括：</li>
+</ol>
+<ul>
+<li>Conv + BN + ReLU → 单个融合层</li>
+<li>Conv + Add + ReLU → 残差块融合</li>
+<li>MatMul + Add → GEMM with bias</li>
+</ul>
+<ol start="2">
+<li><strong>精度优化</strong>：
+   TensorRT支持混合精度推理，自动选择每层的最优精度：</li>
+</ol>
+<ul>
+<li>FP32：最高精度，作为基准</li>
+<li>FP16：2倍加速，轻微精度损失</li>
+<li>INT8：4倍加速，需要校准</li>
+</ul>
+<ol start="3">
+<li><strong>内核自动调优</strong>：
+   对每个层测试多个内核实现，选择最快的：</li>
+</ol>
+<ul>
+<li>不同的tile大小</li>
+<li>不同的内存访问模式</li>
+<li>特定硬件的优化版本</li>
+</ul>
+<ol start="4">
+<li><strong>内存优化</strong>：
+   - 张量内存重用减少总体内存占用
+   - 优化内存布局（NCHW vs NHWC）
+   - 消除不必要的数据格式转换</li>
+</ol>
+<p><strong>构建配置优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// 关键构建参数配置</span>
+<span class="n">class</span><span class="w"> </span><span class="n">TRTEngineBuilder</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">IBuilder</span><span class="o">*</span><span class="w"> </span><span class="n">builder</span><span class="p">;</span>
+<span class="w">    </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">INetworkDefinition</span><span class="o">*</span><span class="w"> </span><span class="n">network</span><span class="p">;</span>
+<span class="w">    </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">IBuilderConfig</span><span class="o">*</span><span class="w"> </span><span class="n">config</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">configure_for_jetson</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 1. 工作空间大小：影响可用优化策略</span>
+<span class="w">        </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setMaxWorkspaceSize</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">30</span><span class="p">);</span><span class="w">  </span><span class="c1">// 1GB</span>
+
+<span class="w">        </span><span class="c1">// 2. DLA支持：启用DLA加速</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">builder</span><span class="o">-&gt;</span><span class="n">getNbDLACores</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setDefaultDeviceType</span><span class="p">(</span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">DeviceType</span><span class="o">::</span><span class="n">kDLA</span><span class="p">);</span>
+<span class="w">            </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setDLACore</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">            </span><span class="c1">// 设置DLA回退策略</span>
+<span class="w">            </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setFlag</span><span class="p">(</span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">BuilderFlag</span><span class="o">::</span><span class="n">kGPU_FALLBACK</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 3. 精度模式：根据需求选择</span>
+<span class="w">        </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setFlag</span><span class="p">(</span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">BuilderFlag</span><span class="o">::</span><span class="n">kFP16</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">int8_calibration_available</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setFlag</span><span class="p">(</span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">BuilderFlag</span><span class="o">::</span><span class="n">kINT8</span><span class="p">);</span>
+<span class="w">            </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setInt8Calibrator</span><span class="p">(</span><span class="n">calibrator</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 4. 优化配置文件：处理动态输入</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="o">-&gt;</span><span class="n">createOptimizationProfile</span><span class="p">();</span>
+<span class="w">        </span><span class="n">profile</span><span class="o">-&gt;</span><span class="n">setDimensions</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">OptProfileSelector</span><span class="o">::</span><span class="n">kMIN</span><span class="p">,</span><span class="w"> </span><span class="n">min_dims</span><span class="p">);</span>
+<span class="w">        </span><span class="n">profile</span><span class="o">-&gt;</span><span class="n">setDimensions</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">OptProfileSelector</span><span class="o">::</span><span class="n">kOPT</span><span class="p">,</span><span class="w"> </span><span class="n">opt_dims</span><span class="p">);</span>
+<span class="w">        </span><span class="n">profile</span><span class="o">-&gt;</span><span class="n">setDimensions</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">,</span><span class="w"> </span>
+<span class="w">            </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">OptProfileSelector</span><span class="o">::</span><span class="n">kMAX</span><span class="p">,</span><span class="w"> </span><span class="n">max_dims</span><span class="p">);</span>
+<span class="w">        </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">addOptimizationProfile</span><span class="p">(</span><span class="n">profile</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 5. 策略选择：平衡构建时间和运行性能</span>
+<span class="w">        </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setProfilingVerbosity</span><span class="p">(</span>
+<span class="w">            </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">ProfilingVerbosity</span><span class="o">::</span><span class="n">kDETAILED</span><span class="p">);</span>
+<span class="w">        </span><span class="n">config</span><span class="o">-&gt;</span><span class="n">setTacticSources</span><span class="p">(</span>
+<span class="w">            </span><span class="mi">1U</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">static_cast</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">TacticSource</span><span class="o">::</span><span class="n">kCUBLAS</span><span class="p">)</span><span class="w"> </span><span class="o">|</span>
+<span class="w">            </span><span class="mi">1U</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">static_cast</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">TacticSource</span><span class="o">::</span><span class="n">kCUDNN</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
 <h3 id="2142-int8">21.4.2 INT8量化校准</h3>
+<p>INT8量化是在Jetson上实现高性能推理的关键技术，可以提供4倍的理论加速比，同时将模型大小减少到原来的1/4。然而，从FP32到INT8的转换需要仔细的校准以保持模型精度。</p>
+<p><strong>量化原理与挑战</strong>：</p>
+<p>INT8量化将浮点数映射到8位整数范围[-128, 127]，这个过程涉及：</p>
+<ol>
+<li><strong>动态范围确定</strong>：找到每个张量的最优量化范围</li>
+<li><strong>量化粒度选择</strong>：逐层、逐通道或逐张量量化</li>
+<li><strong>异常值处理</strong>：处理超出正常范围的激活值</li>
+<li><strong>精度保持</strong>：确保量化后的模型精度损失在可接受范围</li>
+</ol>
+<p><strong>校准数据集准备</strong>：</p>
+<p>校准数据集的质量直接影响量化模型的精度：</p>
+<ol>
+<li><strong>代表性</strong>：数据应覆盖实际部署场景的分布</li>
+<li><strong>多样性</strong>：包含各种边缘情况和困难样本</li>
+<li><strong>规模</strong>：通常500-1000个样本足够</li>
+<li><strong>预处理一致性</strong>：使用与推理时完全相同的预处理</li>
+</ol>
+<p><strong>熵校准与百分位校准</strong>：</p>
+<p>TensorRT提供两种主要的校准算法：</p>
+<ol>
+<li>
+<p><strong>熵校准（Entropy Calibration）</strong>：
+   - 最小化量化前后的KL散度
+   - 适合大多数CNN模型
+   - 倾向于保留分布的主要特征</p>
+</li>
+<li>
+<p><strong>百分位校准（Percentile Calibration）</strong>：
+   - 基于激活值的百分位数确定范围
+   - 对异常值更鲁棒
+   - 适合存在长尾分布的模型</p>
+</li>
+</ol>
+<p><strong>自定义校准器实现</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">Int8EntropyCalibrator</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">public</span><span class="w"> </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">IInt8EntropyCalibrator2</span><span class="w"> </span><span class="p">{</span>
+<span class="n">private</span><span class="o">:</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">calibration_files</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">batch_size</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">current_batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">device_input</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="w"> </span><span class="n">calibration_cache</span><span class="p">;</span>
+
+<span class="n">public</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">getBatch</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">bindings</span><span class="p">[],</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">names</span><span class="p">[],</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nbBindings</span><span class="p">)</span><span class="w"> </span><span class="n">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">current_batch</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">calibration_files</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">batch_size</span><span class="p">)</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 加载校准数据批次</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="w"> </span><span class="n">batch_data</span><span class="p">;</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">batch_size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">current_batch</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">batch_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">calibration_files</span><span class="p">.</span><span class="n">size</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">load_and_preprocess</span><span class="p">(</span><span class="n">calibration_files</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span><span class="w"> </span><span class="n">batch_data</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// 传输到GPU</span>
+<span class="w">        </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">device_input</span><span class="p">,</span><span class="w"> </span><span class="n">batch_data</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span>
+<span class="w">                  </span><span class="n">batch_data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">),</span>
+<span class="w">                  </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">        </span><span class="n">bindings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">device_input</span><span class="p">;</span>
+<span class="w">        </span><span class="n">current_batch</span><span class="o">++</span><span class="p">;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">readCalibrationCache</span><span class="p">(</span><span class="kt">size_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">length</span><span class="p">)</span><span class="w"> </span><span class="n">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 读取缓存的校准表，避免重复校准</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">calibration_cache</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="w"> </span><span class="n">cache_file</span><span class="p">(</span><span class="s">&quot;calibration.cache&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cache_file</span><span class="p">.</span><span class="n">good</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">cache_file</span><span class="p">.</span><span class="n">seekg</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">end</span><span class="p">);</span>
+<span class="w">                </span><span class="n">length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache_file</span><span class="p">.</span><span class="n">tellg</span><span class="p">();</span>
+<span class="w">                </span><span class="n">cache_file</span><span class="p">.</span><span class="n">seekg</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">beg</span><span class="p">);</span>
+<span class="w">                </span><span class="n">calibration_cache</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">length</span><span class="p">);</span>
+<span class="w">                </span><span class="n">cache_file</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">calibration_cache</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">length</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calibration_cache</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">calibration_cache</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">nullptr</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">writeCalibrationCache</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">cache</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">length</span><span class="p">)</span><span class="w"> </span><span class="n">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 保存校准表供后续使用</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">ofstream</span><span class="w"> </span><span class="n">cache_file</span><span class="p">(</span><span class="s">&quot;calibration.cache&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cache_file</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">reinterpret_cast</span><span class="o">&lt;</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">cache</span><span class="p">),</span><span class="w"> </span><span class="n">length</span><span class="p">);</span>
+<span class="w">        </span><span class="n">calibration_cache</span><span class="p">.</span><span class="n">assign</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">cache</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">cache</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">length</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>量化感知训练（QAT）</strong>：</p>
+<p>对于精度要求极高的应用，量化感知训练可以获得更好的结果：</p>
+<ol>
+<li><strong>训练时模拟量化</strong>：在前向传播中插入量化/反量化操作</li>
+<li><strong>学习量化参数</strong>：将scale和zero point作为可学习参数</li>
+<li><strong>渐进式量化</strong>：从高精度逐步过渡到低精度</li>
+<li><strong>混合精度策略</strong>：对敏感层保持高精度</li>
+</ol>
 <h3 id="2143">21.4.3 动态批处理</h3>
+<p>动态批处理是提高GPU利用率和系统吞吐量的关键技术，特别是在处理来自多个源的异步请求时。</p>
+<p><strong>动态形状支持</strong>：</p>
+<p>TensorRT 7.0+引入了对动态形状的全面支持，这对于实际部署至关重要：</p>
+<ol>
+<li>
+<p><strong>优化配置文件（Optimization Profiles）</strong>：
+   - 为不同的输入形状范围创建多个配置
+   - 每个配置指定最小、最优和最大维度
+   - 运行时根据实际输入选择最佳配置</p>
+</li>
+<li>
+<p><strong>显式批处理维度</strong>：
+   - 批处理维度成为网络输入的一部分
+   - 支持不同层有不同的批大小
+   - 实现真正的动态批处理</p>
+</li>
+<li>
+<p><strong>形状张量操作</strong>：
+   - 支持依赖于输入形状的操作
+   - 动态reshape、slice等操作
+   - 条件执行和循环结构</p>
+</li>
+</ol>
+<p><strong>批处理策略优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">DynamicBatchManager</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Request</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">input</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">input_size</span><span class="p">;</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">promise</span><span class="p">;</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">time_point</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">steady_clock</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrival_time</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">queue</span><span class="o">&lt;</span><span class="n">Request</span><span class="o">&gt;</span><span class="w"> </span><span class="n">pending_requests</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="w"> </span><span class="n">queue_mutex</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">max_batch_size</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">max_latency_ms</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">batch_formation_strategy</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">running</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">queue_mutex</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// 等待请求或超时</span>
+<span class="w">            </span><span class="n">cv</span><span class="p">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">lock</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="n">max_latency_ms</span><span class="p">),</span>
+<span class="w">                </span><span class="p">[</span><span class="n">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="o">!</span><span class="n">pending_requests</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="n">running</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">running</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+
+<span class="w">            </span><span class="c1">// 形成批次</span>
+<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Request</span><span class="o">&gt;</span><span class="w"> </span><span class="n">batch</span><span class="p">;</span>
+<span class="w">            </span><span class="k">auto</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">steady_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
+
+<span class="w">            </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">pending_requests</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>
+<span class="w">                   </span><span class="n">batch</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">max_batch_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pending_requests</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>
+
+<span class="w">                </span><span class="c1">// 延迟约束检查</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">latency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">duration_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="o">&gt;</span>
+<span class="w">                              </span><span class="p">(</span><span class="n">now</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">arrival_time</span><span class="p">).</span><span class="n">count</span><span class="p">();</span>
+
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">batch</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">latency</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">max_latency_ms</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">batch</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">req</span><span class="p">));</span>
+<span class="w">                    </span><span class="n">pending_requests</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+<span class="w">                </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">batch</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">max_batch_size</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="c1">// 等待更多请求以提高效率</span>
+<span class="w">                    </span><span class="n">batch</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">req</span><span class="p">));</span>
+<span class="w">                    </span><span class="n">pending_requests</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+<span class="w">                </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="k">break</span><span class="p">;</span><span class="w">  </span><span class="c1">// 保留请求给下一批</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">batch</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">process_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>内存管理优化</strong>：</p>
+<p>动态批处理需要高效的内存管理策略：</p>
+<ol>
+<li><strong>内存池预分配</strong>：为不同批大小预分配缓冲区</li>
+<li><strong>零拷贝批处理</strong>：使用统一内存避免数据复制</li>
+<li><strong>环形缓冲区</strong>：实现高效的生产者-消费者模式</li>
+<li><strong>CUDA Graph优化</strong>：对固定模式使用Graph加速</li>
+</ol>
 <h3 id="2144">21.4.4 插件开发与优化</h3>
+<p>TensorRT插件机制允许添加自定义算子，这对于支持新架构或优化特定操作至关重要。</p>
+<p><strong>插件开发流程</strong>：</p>
+<p>开发高性能TensorRT插件需要理解其生命周期和接口要求：</p>
+<ol>
+<li>
+<p><strong>插件接口实现</strong>：
+   - IPluginV2DynamicExt：支持动态形状
+   - 实现推理、序列化、资源管理接口
+   - 正确处理数据格式和精度</p>
+</li>
+<li>
+<p><strong>性能优化要点</strong>：
+   - 选择最优的CUDA配置
+   - 实现多精度支持（FP32/FP16/INT8）
+   - 利用共享内存和寄存器优化
+   - 考虑tensor core加速</p>
+</li>
+<li>
+<p><strong>兼容性考虑</strong>：
+   - 支持不同的数据布局（NCHW/NHWC）
+   - 处理广播和stride
+   - 实现高效的形状推导</p>
+</li>
+</ol>
+<p><strong>自定义算子示例</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">class</span><span class="w"> </span><span class="n">CustomPoolingPlugin</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">public</span><span class="w"> </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">IPluginV2DynamicExt</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 高效的自定义池化实现</span>
+<span class="w">    </span><span class="n">template</span><span class="o">&lt;</span><span class="n">typename</span><span class="w"> </span><span class="n">T</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">custom_pooling_kernel</span><span class="p">(</span>
+<span class="w">        </span><span class="k">const</span><span class="w"> </span><span class="n">T</span><span class="o">*</span><span class="w"> </span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">T</span><span class="o">*</span><span class="w"> </span><span class="n">output</span><span class="p">,</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">batch</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">channels</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="p">,</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">pool_size</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">threshold</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">total_elements</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">batch</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">channels</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">total_elements</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 计算位置</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">channels</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="p">))</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">channels</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">width</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">height</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">width</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 自定义池化逻辑：阈值加权池化</span>
+<span class="w">        </span><span class="n">T</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">ph</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">ph</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">pool_size</span><span class="p">;</span><span class="w"> </span><span class="n">ph</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">pw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">pw</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">pool_size</span><span class="p">;</span><span class="w"> </span><span class="n">pw</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kt">int</span><span class="w"> </span><span class="n">h_idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">pool_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ph</span><span class="p">;</span>
+<span class="w">                </span><span class="kt">int</span><span class="w"> </span><span class="n">w_idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">pool_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">pw</span><span class="p">;</span>
+
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">h_idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">w_idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">width</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">T</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">channels</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="w"> </span><span class="o">+</span>
+<span class="w">                                 </span><span class="n">c</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="w"> </span><span class="o">+</span>
+<span class="w">                                 </span><span class="n">h_idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">w_idx</span><span class="p">];</span>
+
+<span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">val</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">threshold</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">val</span><span class="p">;</span>
+<span class="w">                        </span><span class="n">count</span><span class="o">++</span><span class="p">;</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">output</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">enqueue</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">PluginTensorDesc</span><span class="o">*</span><span class="w"> </span><span class="n">inputDesc</span><span class="p">,</span>
+<span class="w">                </span><span class="k">const</span><span class="w"> </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">PluginTensorDesc</span><span class="o">*</span><span class="w"> </span><span class="n">outputDesc</span><span class="p">,</span>
+<span class="w">                </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="k">const</span><span class="o">*</span><span class="w"> </span><span class="n">inputs</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="k">const</span><span class="o">*</span><span class="w"> </span><span class="n">outputs</span><span class="p">,</span>
+<span class="w">                </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">workspace</span><span class="p">,</span><span class="w"> </span><span class="n">cudaStream_t</span><span class="w"> </span><span class="n">stream</span><span class="p">)</span><span class="w"> </span><span class="n">override</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="c1">// 获取维度信息</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inputDesc</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">dims</span><span class="p">.</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">channels</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inputDesc</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">dims</span><span class="p">.</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inputDesc</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">dims</span><span class="p">.</span><span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inputDesc</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">dims</span><span class="p">.</span><span class="n">d</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+
+<span class="w">        </span><span class="c1">// 选择合适的块大小</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">threads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">256</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">elements</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">batch</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">channels</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">elements</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">threads</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">threads</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// 根据数据类型分发</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">inputDesc</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">type</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">DataType</span><span class="o">::</span><span class="n">kFLOAT</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">custom_pooling_kernel</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span>
+<span class="w">                </span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="p">)</span><span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="p">)</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+<span class="w">                </span><span class="n">batch</span><span class="p">,</span><span class="w"> </span><span class="n">channels</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">,</span>
+<span class="w">                </span><span class="n">pool_size_</span><span class="p">,</span><span class="w"> </span><span class="n">threshold_</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">inputDesc</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">type</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">nvinfer1</span><span class="o">::</span><span class="n">DataType</span><span class="o">::</span><span class="n">kHALF</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">custom_pooling_kernel</span><span class="o">&lt;</span><span class="n">__half</span><span class="o">&gt;&lt;&lt;&lt;</span><span class="n">blocks</span><span class="p">,</span><span class="w"> </span><span class="n">threads</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span>
+<span class="w">                </span><span class="p">(</span><span class="n">__half</span><span class="o">*</span><span class="p">)</span><span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="p">(</span><span class="n">__half</span><span class="o">*</span><span class="p">)</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+<span class="w">                </span><span class="n">batch</span><span class="p">,</span><span class="w"> </span><span class="n">channels</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">,</span>
+<span class="w">                </span><span class="n">pool_size_</span><span class="p">,</span><span class="w"> </span><span class="n">threshold_</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p><strong>插件优化技巧</strong>：</p>
+<ol>
+<li>
+<p><strong>内存访问优化</strong>：
+   - 使用向量化加载提高带宽利用率
+   - 实现coalesced访问模式
+   - 利用纹理内存或常量内存</p>
+</li>
+<li>
+<p><strong>计算优化</strong>：
+   - 使用tensor core进行矩阵运算
+   - 实现warp级别的协作
+   - 避免分支分歧</p>
+</li>
+<li>
+<p><strong>多版本实现</strong>：
+   - 为不同输入大小提供特化版本
+   - 根据硬件能力选择实现
+   - 支持不同精度的优化路径</p>
+</li>
+</ol>
 <h2 id="215-ai">21.5 案例：边缘AI部署</h2>
 <h3 id="2151">21.5.1 系统架构设计</h3>
 <h3 id="2152">21.5.2 多模型协同推理</h3>
