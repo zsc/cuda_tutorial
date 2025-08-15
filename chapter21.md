@@ -837,13 +837,439 @@ public:
 
 ## 21.4 TensorRT集成
 
+TensorRT是NVIDIA专为推理优化设计的高性能深度学习推理库，在Jetson平台上扮演着关键角色。它通过层融合、精度校准、内核自动调优等技术，可以将模型推理速度提升3-10倍，同时降低内存占用和功耗。对于自动驾驶和具身智能应用，TensorRT是实现实时推理的核心技术。
+
 ### 21.4.1 模型转换流程
+
+将训练好的模型转换为TensorRT引擎涉及多个步骤，每一步都有其优化空间。理解整个转换流程对于获得最佳性能至关重要。
+
+**转换路径选择**：
+
+TensorRT支持多种模型格式的转换路径，每种路径有不同的优缺点：
+
+```
+PyTorch → ONNX → TensorRT：最通用，支持动态图
+TensorFlow → TF-TRT → TensorRT：集成度高，保留TF生态
+TensorFlow → ONNX → TensorRT：更好的算子支持
+Caffe → TensorRT：直接支持，但功能有限
+```
+
+选择转换路径时需要考虑：
+- **算子覆盖率**：不是所有算子都被TensorRT原生支持
+- **动态维度需求**：某些路径更好地支持动态输入
+- **精度要求**：不同路径的数值精度可能略有差异
+- **转换复杂度**：直接路径通常更简单但灵活性较低
+
+**ONNX转换最佳实践**：
+
+ONNX作为中间表示格式，是最灵活的转换路径。转换过程中的关键考虑：
+
+1. **导出配置优化**：
+   - 设置正确的opset版本以获得最佳算子支持
+   - 使用动态轴处理可变批大小
+   - 启用常量折叠减少图复杂度
+
+2. **图优化技术**：
+   - 移除不必要的类型转换节点
+   - 合并连续的transpose操作
+   - 简化复杂的reshape序列
+
+3. **算子兼容性处理**：
+   - 使用onnx-simplifier简化计算图
+   - 替换不支持的算子为等效实现
+   - 添加自定义算子插件支持
+
+**TensorRT引擎构建**：
+
+引擎构建是性能优化的核心阶段，TensorRT在此阶段执行多种优化：
+
+1. **层融合（Layer Fusion）**：
+   融合相邻的层减少内存访问和内核启动开销。常见的融合模式包括：
+   - Conv + BN + ReLU → 单个融合层
+   - Conv + Add + ReLU → 残差块融合
+   - MatMul + Add → GEMM with bias
+
+2. **精度优化**：
+   TensorRT支持混合精度推理，自动选择每层的最优精度：
+   - FP32：最高精度，作为基准
+   - FP16：2倍加速，轻微精度损失
+   - INT8：4倍加速，需要校准
+
+3. **内核自动调优**：
+   对每个层测试多个内核实现，选择最快的：
+   - 不同的tile大小
+   - 不同的内存访问模式
+   - 特定硬件的优化版本
+
+4. **内存优化**：
+   - 张量内存重用减少总体内存占用
+   - 优化内存布局（NCHW vs NHWC）
+   - 消除不必要的数据格式转换
+
+**构建配置优化**：
+
+```cuda
+// 关键构建参数配置
+class TRTEngineBuilder {
+    nvinfer1::IBuilder* builder;
+    nvinfer1::INetworkDefinition* network;
+    nvinfer1::IBuilderConfig* config;
+    
+    void configure_for_jetson() {
+        // 1. 工作空间大小：影响可用优化策略
+        config->setMaxWorkspaceSize(1 << 30);  // 1GB
+        
+        // 2. DLA支持：启用DLA加速
+        if (builder->getNbDLACores() > 0) {
+            config->setDefaultDeviceType(nvinfer1::DeviceType::kDLA);
+            config->setDLACore(0);
+            // 设置DLA回退策略
+            config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
+        }
+        
+        // 3. 精度模式：根据需求选择
+        config->setFlag(nvinfer1::BuilderFlag::kFP16);
+        if (int8_calibration_available) {
+            config->setFlag(nvinfer1::BuilderFlag::kINT8);
+            config->setInt8Calibrator(calibrator);
+        }
+        
+        // 4. 优化配置文件：处理动态输入
+        auto profile = builder->createOptimizationProfile();
+        profile->setDimensions("input", 
+            nvinfer1::OptProfileSelector::kMIN, min_dims);
+        profile->setDimensions("input", 
+            nvinfer1::OptProfileSelector::kOPT, opt_dims);
+        profile->setDimensions("input", 
+            nvinfer1::OptProfileSelector::kMAX, max_dims);
+        config->addOptimizationProfile(profile);
+        
+        // 5. 策略选择：平衡构建时间和运行性能
+        config->setProfilingVerbosity(
+            nvinfer1::ProfilingVerbosity::kDETAILED);
+        config->setTacticSources(
+            1U << static_cast<uint32_t>(nvinfer1::TacticSource::kCUBLAS) |
+            1U << static_cast<uint32_t>(nvinfer1::TacticSource::kCUDNN));
+    }
+};
+```
 
 ### 21.4.2 INT8量化校准
 
+INT8量化是在Jetson上实现高性能推理的关键技术，可以提供4倍的理论加速比，同时将模型大小减少到原来的1/4。然而，从FP32到INT8的转换需要仔细的校准以保持模型精度。
+
+**量化原理与挑战**：
+
+INT8量化将浮点数映射到8位整数范围[-128, 127]，这个过程涉及：
+
+1. **动态范围确定**：找到每个张量的最优量化范围
+2. **量化粒度选择**：逐层、逐通道或逐张量量化
+3. **异常值处理**：处理超出正常范围的激活值
+4. **精度保持**：确保量化后的模型精度损失在可接受范围
+
+**校准数据集准备**：
+
+校准数据集的质量直接影响量化模型的精度：
+
+1. **代表性**：数据应覆盖实际部署场景的分布
+2. **多样性**：包含各种边缘情况和困难样本
+3. **规模**：通常500-1000个样本足够
+4. **预处理一致性**：使用与推理时完全相同的预处理
+
+**熵校准与百分位校准**：
+
+TensorRT提供两种主要的校准算法：
+
+1. **熵校准（Entropy Calibration）**：
+   - 最小化量化前后的KL散度
+   - 适合大多数CNN模型
+   - 倾向于保留分布的主要特征
+
+2. **百分位校准（Percentile Calibration）**：
+   - 基于激活值的百分位数确定范围
+   - 对异常值更鲁棒
+   - 适合存在长尾分布的模型
+
+**自定义校准器实现**：
+
+```cuda
+class Int8EntropyCalibrator : public nvinfer1::IInt8EntropyCalibrator2 {
+private:
+    std::vector<std::string> calibration_files;
+    int batch_size;
+    size_t current_batch = 0;
+    void* device_input;
+    std::vector<char> calibration_cache;
+    
+public:
+    bool getBatch(void* bindings[], const char* names[], int nbBindings) override {
+        if (current_batch >= calibration_files.size() / batch_size)
+            return false;
+        
+        // 加载校准数据批次
+        std::vector<float> batch_data;
+        for (int i = 0; i < batch_size; i++) {
+            int idx = current_batch * batch_size + i;
+            if (idx < calibration_files.size()) {
+                load_and_preprocess(calibration_files[idx], batch_data);
+            }
+        }
+        
+        // 传输到GPU
+        cudaMemcpy(device_input, batch_data.data(), 
+                  batch_data.size() * sizeof(float),
+                  cudaMemcpyHostToDevice);
+        bindings[0] = device_input;
+        current_batch++;
+        return true;
+    }
+    
+    const void* readCalibrationCache(size_t& length) override {
+        // 读取缓存的校准表，避免重复校准
+        if (calibration_cache.empty()) {
+            std::ifstream cache_file("calibration.cache", std::ios::binary);
+            if (cache_file.good()) {
+                cache_file.seekg(0, std::ios::end);
+                length = cache_file.tellg();
+                cache_file.seekg(0, std::ios::beg);
+                calibration_cache.resize(length);
+                cache_file.read(calibration_cache.data(), length);
+            }
+        }
+        length = calibration_cache.size();
+        return length ? calibration_cache.data() : nullptr;
+    }
+    
+    void writeCalibrationCache(const void* cache, size_t length) override {
+        // 保存校准表供后续使用
+        std::ofstream cache_file("calibration.cache", std::ios::binary);
+        cache_file.write(reinterpret_cast<const char*>(cache), length);
+        calibration_cache.assign((char*)cache, (char*)cache + length);
+    }
+};
+```
+
+**量化感知训练（QAT）**：
+
+对于精度要求极高的应用，量化感知训练可以获得更好的结果：
+
+1. **训练时模拟量化**：在前向传播中插入量化/反量化操作
+2. **学习量化参数**：将scale和zero point作为可学习参数
+3. **渐进式量化**：从高精度逐步过渡到低精度
+4. **混合精度策略**：对敏感层保持高精度
+
 ### 21.4.3 动态批处理
 
+动态批处理是提高GPU利用率和系统吞吐量的关键技术，特别是在处理来自多个源的异步请求时。
+
+**动态形状支持**：
+
+TensorRT 7.0+引入了对动态形状的全面支持，这对于实际部署至关重要：
+
+1. **优化配置文件（Optimization Profiles）**：
+   - 为不同的输入形状范围创建多个配置
+   - 每个配置指定最小、最优和最大维度
+   - 运行时根据实际输入选择最佳配置
+
+2. **显式批处理维度**：
+   - 批处理维度成为网络输入的一部分
+   - 支持不同层有不同的批大小
+   - 实现真正的动态批处理
+
+3. **形状张量操作**：
+   - 支持依赖于输入形状的操作
+   - 动态reshape、slice等操作
+   - 条件执行和循环结构
+
+**批处理策略优化**：
+
+```cuda
+class DynamicBatchManager {
+    struct Request {
+        void* input;
+        void* output;
+        size_t input_size;
+        std::promise<void> promise;
+        std::chrono::time_point<std::chrono::steady_clock> arrival_time;
+    };
+    
+    std::queue<Request> pending_requests;
+    std::mutex queue_mutex;
+    int max_batch_size;
+    int max_latency_ms;
+    
+    void batch_formation_strategy() {
+        while (running) {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            
+            // 等待请求或超时
+            cv.wait_for(lock, std::chrono::milliseconds(max_latency_ms),
+                [this] { return !pending_requests.empty() || !running; });
+            
+            if (!running) break;
+            
+            // 形成批次
+            std::vector<Request> batch;
+            auto now = std::chrono::steady_clock::now();
+            
+            while (!pending_requests.empty() && 
+                   batch.size() < max_batch_size) {
+                auto& req = pending_requests.front();
+                
+                // 延迟约束检查
+                auto latency = std::chrono::duration_cast<std::chrono::milliseconds>
+                              (now - req.arrival_time).count();
+                
+                if (batch.empty() || latency >= max_latency_ms * 0.8) {
+                    batch.push_back(std::move(req));
+                    pending_requests.pop();
+                } else if (batch.size() < max_batch_size / 2) {
+                    // 等待更多请求以提高效率
+                    batch.push_back(std::move(req));
+                    pending_requests.pop();
+                } else {
+                    break;  // 保留请求给下一批
+                }
+            }
+            
+            if (!batch.empty()) {
+                process_batch(batch);
+            }
+        }
+    }
+};
+```
+
+**内存管理优化**：
+
+动态批处理需要高效的内存管理策略：
+
+1. **内存池预分配**：为不同批大小预分配缓冲区
+2. **零拷贝批处理**：使用统一内存避免数据复制
+3. **环形缓冲区**：实现高效的生产者-消费者模式
+4. **CUDA Graph优化**：对固定模式使用Graph加速
+
 ### 21.4.4 插件开发与优化
+
+TensorRT插件机制允许添加自定义算子，这对于支持新架构或优化特定操作至关重要。
+
+**插件开发流程**：
+
+开发高性能TensorRT插件需要理解其生命周期和接口要求：
+
+1. **插件接口实现**：
+   - IPluginV2DynamicExt：支持动态形状
+   - 实现推理、序列化、资源管理接口
+   - 正确处理数据格式和精度
+
+2. **性能优化要点**：
+   - 选择最优的CUDA配置
+   - 实现多精度支持（FP32/FP16/INT8）
+   - 利用共享内存和寄存器优化
+   - 考虑tensor core加速
+
+3. **兼容性考虑**：
+   - 支持不同的数据布局（NCHW/NHWC）
+   - 处理广播和stride
+   - 实现高效的形状推导
+
+**自定义算子示例**：
+
+```cuda
+class CustomPoolingPlugin : public nvinfer1::IPluginV2DynamicExt {
+    // 高效的自定义池化实现
+    template<typename T>
+    __global__ void custom_pooling_kernel(
+        const T* input, T* output,
+        int batch, int channels, int height, int width,
+        int pool_size, float threshold) {
+        
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        int total_elements = batch * channels * height * width;
+        
+        if (idx >= total_elements) return;
+        
+        // 计算位置
+        int n = idx / (channels * height * width);
+        int c = (idx / (height * width)) % channels;
+        int h = (idx / width) % height;
+        int w = idx % width;
+        
+        // 自定义池化逻辑：阈值加权池化
+        T sum = 0;
+        int count = 0;
+        
+        for (int ph = 0; ph < pool_size; ph++) {
+            for (int pw = 0; pw < pool_size; pw++) {
+                int h_idx = h * pool_size + ph;
+                int w_idx = w * pool_size + pw;
+                
+                if (h_idx < height && w_idx < width) {
+                    T val = input[n * channels * height * width +
+                                 c * height * width +
+                                 h_idx * width + w_idx];
+                    
+                    if (val > threshold) {
+                        sum += val;
+                        count++;
+                    }
+                }
+            }
+        }
+        
+        output[idx] = count > 0 ? sum / count : 0;
+    }
+    
+    int enqueue(const nvinfer1::PluginTensorDesc* inputDesc,
+                const nvinfer1::PluginTensorDesc* outputDesc,
+                const void* const* inputs, void* const* outputs,
+                void* workspace, cudaStream_t stream) override {
+        
+        // 获取维度信息
+        int batch = inputDesc[0].dims.d[0];
+        int channels = inputDesc[0].dims.d[1];
+        int height = inputDesc[0].dims.d[2];
+        int width = inputDesc[0].dims.d[3];
+        
+        // 选择合适的块大小
+        int threads = 256;
+        int elements = batch * channels * height * width;
+        int blocks = (elements + threads - 1) / threads;
+        
+        // 根据数据类型分发
+        if (inputDesc[0].type == nvinfer1::DataType::kFLOAT) {
+            custom_pooling_kernel<float><<<blocks, threads, 0, stream>>>(
+                (float*)inputs[0], (float*)outputs[0],
+                batch, channels, height, width,
+                pool_size_, threshold_);
+        } else if (inputDesc[0].type == nvinfer1::DataType::kHALF) {
+            custom_pooling_kernel<__half><<<blocks, threads, 0, stream>>>(
+                (__half*)inputs[0], (__half*)outputs[0],
+                batch, channels, height, width,
+                pool_size_, threshold_);
+        }
+        
+        return 0;
+    }
+};
+```
+
+**插件优化技巧**：
+
+1. **内存访问优化**：
+   - 使用向量化加载提高带宽利用率
+   - 实现coalesced访问模式
+   - 利用纹理内存或常量内存
+
+2. **计算优化**：
+   - 使用tensor core进行矩阵运算
+   - 实现warp级别的协作
+   - 避免分支分歧
+
+3. **多版本实现**：
+   - 为不同输入大小提供特化版本
+   - 根据硬件能力选择实现
+   - 支持不同精度的优化路径
 
 ## 21.5 案例：边缘AI部署
 
